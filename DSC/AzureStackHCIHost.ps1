@@ -432,7 +432,7 @@
 
             SetScript = {
                 #Create Azure Stack HCI Host Image
-                Convert-Wim2Vhd -DiskLayout UEFI -SourcePath $using:azsHCIISOLocalPath -Path $using:azsHciVhdPath -Size 30GB -Dynamic -Index 1 -ErrorAction SilentlyContinue
+                Convert-Wim2Vhd -DiskLayout UEFI -SourcePath $using:azsHCIISOLocalPath -Path $using:azsHciVhdPath -Size 100B -Dynamic -Index 1 -ErrorAction SilentlyContinue
                 #Enable Hyper-v role on the Azure Stack HCI Host Image
                 Install-WindowsFeature -Vhd $using:azsHciVhdPath -Name Hyper-V
             }
@@ -453,7 +453,7 @@
             }
 
             SetScript = {
-                Convert-Wim2Vhd -DiskLayout UEFI -SourcePath $using:ws2019IsoLocalPath -Path $using:ws2019VhdPath -Size 30GB -Dynamic -Index 1 -ErrorAction SilentlyContinue
+                Convert-Wim2Vhd -DiskLayout UEFI -SourcePath $using:ws2019IsoLocalPath -Path $using:ws2019VhdPath -Size 100GB -Dynamic -Index 1 -ErrorAction SilentlyContinue
             }
 
             TestScript = {

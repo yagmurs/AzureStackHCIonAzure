@@ -32,9 +32,9 @@ Note that all VMs deployed within the Azure VM use **same password** that has be
 
 Once the deployment completed. There will be HPV01 and HPV02 and so on (based on azsHCIHostCount on the ARM template parameter) and WAC will be installed within the Azure VM.
 
-*  HPV01 will be configured with Ip address 192.168.0.101 with default gateway 192.168.0.1 and DNS 192.168.0.1
-*  HPV02 will be configured with Ip address 192.168.0.102 with default gateway 192.168.0.1 and DNS 192.168.0.1
-*  WAC will be configured with Ip address 192.168.0.100 with default gateway 192.168.0.1 and DNS 192.168.0.1
+* HPV01 will be configured with Ip address 192.168.0.101 with default gateway 192.168.0.1 and DNS 192.168.0.1
+* HPV02 will be configured with Ip address 192.168.0.102 with default gateway 192.168.0.1 and DNS 192.168.0.1
+* WAC will be configured with Ip address 192.168.0.100 with default gateway 192.168.0.1 and DNS 192.168.0.1
 
 #### Deploying Azure Stack using Windows Admin Center
 
