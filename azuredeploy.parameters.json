@@ -1,0 +1,69 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "adminUsername": {
+            "value": "adm01"
+        },
+        "domainName": {
+            "value": "corp.msft.fun"
+        },
+        "dnsPrefix": {
+            "value": "msftfundc"
+        },
+        "vmSize": {
+            "value": "Standard_E4s_v4"
+        },
+        "location": {
+            "value": "germanywestcentral"
+        },
+        "virtualMachineName": {
+            "value": "dc01"
+        },
+        "azsHCIHostCount": {
+            "value": 2
+        },
+        "virtualNetworkName": {
+            "value": "msftfun-GWC-vnet"
+        },
+        "virtualNetworkAddressRange": {
+            "value": "172.31.0.0/16"
+        },
+        "loadBalancerFrontEndIPName": {
+            "value": "LBFE"
+        },
+        "backendAddressPoolName": {
+            "value": "LBBE"
+        },
+        "inboundNatRulesName": {
+            "value": "dcRDP"
+        },
+        "networkInterfaceName": {
+            "value": "dc01Nic"
+        },
+        "privateIPAddress": {
+            "value": "172.31.1.4"
+        },
+        "subnetName": {
+            "value": "dcSubnet"
+        },
+        "subnetRange": {
+            "value": "172.31.1.0/24"
+        },
+        "publicIPAddressName": {
+            "value": "dc01PublicIP"
+        },
+        "availabilitySetName": {
+            "value": "dcAvailabiltySet"
+        },
+        "loadBalancerName": {
+            "value": "dcLoadBalancer"
+        },
+        "_artifactsLocation": {
+            "value": "https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/active-directory-new-domain/"
+        },
+        "_artifactsLocationSasToken": {
+            "value": ""
+        }
+    }
+}

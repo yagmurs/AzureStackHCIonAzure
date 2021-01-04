@@ -1,0 +1,75 @@
+/*
+@TargetNode='pending'
+@GeneratedBy=yagmurs
+@GenerationDate=12/30/2020 15:53:23
+@GenerationHost=YAGMURS-3
+*/
+
+instance of cChocoInstaller as $cChocoInstaller1ref
+{
+ModuleName = "cChoco";
+ SourceInfo = "::9::9::cChocoInstaller";
+ ResourceID = "[cChocoInstaller]InstallChoco";
+ ModuleVersion = "2.4.1.0";
+ InstallDir = "c:\\choco";
+ ConfigurationName = "choco";
+};
+instance of cChocoFeature as $cChocoFeature1ref
+{
+ModuleName = "cChoco";
+ Ensure = "Present";
+ SourceInfo = "::14::9::cChocoFeature";
+ ResourceID = "[cChocoFeature]allowGlobalConfirmation";
+ FeatureName = "allowGlobalConfirmation";
+ ModuleVersion = "2.4.1.0";
+
+DependsOn = {
+    "[cChocoInstaller]installChoco"};
+ ConfigurationName = "choco";
+};
+instance of cChocoFeature as $cChocoFeature2ref
+{
+ModuleName = "cChoco";
+ Ensure = "Present";
+ SourceInfo = "::22::9::cChocoFeature";
+ ResourceID = "[cChocoFeature]useRememberedArgumentsForUpgrades";
+ FeatureName = "useRememberedArgumentsForUpgrades";
+ ModuleVersion = "2.4.1.0";
+
+DependsOn = {
+    "[cChocoInstaller]installChoco"};
+ ConfigurationName = "choco";
+};
+instance of cChocoPackageInstall as $cChocoPackageInstall1ref
+{
+ModuleName = "cChoco";
+ Name = "windows-admin-center";
+ Ensure = "Present";
+ AutoUpgrade = True;
+ SourceInfo = "::30::9::cChocoPackageInstaller";
+ Params = "'/Port:443'";
+ ResourceID = "[cChocoPackageInstaller]Install Windows Admin Center on 443";
+ ModuleVersion = "2.4.1.0";
+
+DependsOn = {
+    "[cChocoInstaller]installChoco"};
+ ConfigurationName = "choco";
+};
+instance of OMI_ConfigurationDocument
+
+                    {
+ Version="2.0.0";
+
+                        MinimumCompatibleVersion = "1.0.0";
+
+                        CompatibleVersionAdditionalProperties= {"Omi_BaseResource:ConfigurationName"};
+
+                        Author="yagmurs";
+
+                        GenerationDate="12/30/2020 15:53:23";
+
+                        GenerationHost="YAGMURS-3";
+
+                        Name="choco";
+
+                    };
