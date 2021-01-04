@@ -445,7 +445,7 @@
             DependsOn = "[file]VM-Base", "[script]Download AzureStack HCI bits"
         }
 
-        script "prepareVHDX win10"
+        script "prepareVHDX ws2019"
         {
             GetScript = {
                 $result = Test-Path -Path $using:ws2019VhdPath
@@ -699,7 +699,7 @@
             Generation       = 'vhdx'
             ParentPath       = $ws2019VhdPath
             Type             = 'Differencing'
-            DependsOn = "[xVMSwitch]$vSwitchNameMgmt", "[script]prepareVHDX win10", "[file]VM-Folder-$wacVMName"
+            DependsOn = "[xVMSwitch]$vSwitchNameMgmt", "[script]prepareVHDX win2019", "[file]VM-Folder-$wacVMName"
         }
 
         xVMHyperV "VM-$wacVMName"
