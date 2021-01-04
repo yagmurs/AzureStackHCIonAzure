@@ -20,8 +20,10 @@ This ARM template and DSC extension prepares Azure VM as Hyper-v host (also Doma
 
 ### High level deployment process and features
 
-Deploy the ARM template by providing all the parameters required. Most of the parameters have default values and sufficient for demostrate Azure Stack HCI features and deployment procedures.
+Deploy the ARM template (above buttons) by providing all the parameters required. Most of the parameters have default values and sufficient for demostrate Azure Stack HCI features and deployment procedures.
 Windows Admin Center is also configured with DSC using Choco which means will be updated once released in Choco repository. All installed extensions are getting updated daily in the background.
+
+**Do not use 192.168.0.0/24 and 192.168.100.0/24 networks for Vnet since those network are getting utilized in the Nested environment.**
 
 ### Deploying ARM template using Powershell
 
