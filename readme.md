@@ -4,7 +4,6 @@ Click the button below to deploy from the portal:
 
 [![Visualize](https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/visualizebutton.svg?sanitize=true)](http://armviz.io/#/?load=https%3A%2F%2Fraw.githubusercontent.com%2Fyagmurs%2FAzureStackHCIonAzure%2Fmaster%2Fazuredeploy.json)
 
-
 # Azure Stack HCI on Azure VM project
 
 Creates new Azure VM and install prerequisites to run Proof of Concept for Azure Stack HCI.
@@ -15,14 +14,35 @@ Creates new Azure VM and install prerequisites to run Proof of Concept for Azure
 
 This ARM template and DSC extension prepares Azure VM as Hyper-v host (also Domain Controller) to run 2 or more Nested Azure Stack HCI host with nested virtualization enabled and Deploy 1 nested VM for Windows Admin Center named WAC. DSC extension download all the bits required.
 
+
+
 ## Step by Step Guidance
 
 ### High level deployment process and features
 
 Deploy the ARM template (above buttons) by providing all the parameters required. Most of the parameters have default values and sufficient for demostrate Azure Stack HCI features and deployment procedures.
-Windows Admin Center is also configured with DSC using Choco which means will be updated once released in Choco repository. All installed extensions are getting updated daily in the background..
+Windows Admin Center is also configured with DSC using Choco which means will be updated once released in Choco repository. All installed extensions are getting updated daily in the background.
 
-**Do not use 192.168.0.0/24 and 192.168.100.0/24 networks for Vnet since those network are getting utilized in the Nested environment.**
+Note that all VMs deployed within the Azure VM use **same password** that has been specified in the ARM template. 
+
+* All Local accounts are named as **Administrator**.
+* The **Domain Administrator** username is the **Username specified in the ARM template**.
+
+#### Nested VMs configurations
+
+Once the deployment completed. There will be HPV01 and HPV02 and so on (based on azsHCIHostCount on the ARM template parameter) and WAC will be installed within the Azure VM.
+
+*  HPV01 will be configured with Ip address 192.168.0.101 with default gateway 192.168.0.1 and DNS 192.168.0.1
+*  HPV02 will be configured with Ip address 192.168.0.102 with default gateway 192.168.0.1 and DNS 192.168.0.1
+*  WAC will be configured with Ip address 192.168.0.100 with default gateway 192.168.0.1 and DNS 192.168.0.1
+
+#### Deploying Azure Stack using Windows Admin Center
+
+Open Edge browser installed on Azure Vm and connect to https://192.168.0.100 and invoke Azure Stack HCI wizard. And follow the steps. You can use 192.168.0.200 as cluster static Ip address.
+
+Once you have deployed your Azure Stack HCI cluster, You can use 192.168.100.0/24 to let them use DHCP server configured on Azure VM. So all VMs would be able to connect to Internet.
+
+**Do not use 192.168.0.0/24 , 192.168.100.0/24 , 192.168.254.0/24 , 192.168.255.0/24 networks for Vnet since those network are getting utilized in the Nested environment.**
 
 ### Deploying ARM template using Powershell
 
@@ -65,6 +85,10 @@ Start-DscConfiguration -UseExisting -Wait -Verbose -Force
 This solution is not officially support by **Microsoft** and experimental, may not work in the future.
 
 ## Issues and features
+
+### Known issues
+
+During the Azure Stack HCI deployment through the Windows Admin Center (Phase 1.5) you might get an error 'hpv\<Suffix> doesn't seem to be internet-connected.' You can disregard the error message. All VMs are connected and will install updates.
 
 ### How to file a bug
 
