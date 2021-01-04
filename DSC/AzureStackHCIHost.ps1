@@ -293,6 +293,12 @@
             DependsOn = "[WindowsFeature]Hyper-V" 
         }
 
+        WindowsFeature "RSAT-Clustering" 
+        {
+            Name = "RSAT-Clustering"
+            Ensure = "Present"
+        }
+
         xVMHost "hpvHost"
         {
             IsSingleInstance = 'yes'
