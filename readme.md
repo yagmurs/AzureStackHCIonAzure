@@ -11,7 +11,6 @@ Creates new Azure VM and install prerequisites to run Proof of Concept for Azure
 
 ## Version Compatibility
 
-
 ## Description
 
 This ARM template and DSC extension prepares Azure VM as Hyper-v host (also Domain Controller) to run 2 or more Nested Azure Stack HCI host with nested virtualization enabled and Deploy 1 nested VM for Windows Admin Center named WAC. DSC extension download all the bits required.
