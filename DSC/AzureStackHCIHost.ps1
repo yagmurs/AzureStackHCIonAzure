@@ -362,7 +362,21 @@
             IPAddress = '192.168.100.1'
         }
 
-        xDhcpServerScope "Scope" 
+        xDhcpServerScope "Scope 192.168.0.0" 
+        { 
+            Ensure = 'Present'
+            IPStartRange = '192.168.0.220' 
+            IPEndRange = '192.168.0.240' 
+            ScopeId = '192.168.0.0'
+            Name = 'Client Address Range for Nested VMs on AzSHCI Cluster' 
+            SubnetMask = '255.255.255.0' 
+            LeaseDuration = '00:08:00' 
+            State = 'Active' 
+            AddressFamily = 'IPv4'
+            DependsOn = @("[WindowsFeature]Install DHCPServer", "[xIPAddress]New IP for vEthernet $vSwitchNameMgmt")
+        }
+
+        xDhcpServerScope "Scope 192.168.100.0" 
         { 
             Ensure = 'Present'
             IPStartRange = '192.168.100.21' 
@@ -374,6 +388,17 @@
             State = 'Active' 
             AddressFamily = 'IPv4'
             DependsOn = @("[WindowsFeature]Install DHCPServer", "[xIPAddress]New IP for vEthernet $vSwitchNameConverged")
+        }
+
+        xDhcpServerOption "Option" 
+        { 
+            Ensure = 'Present' 
+            ScopeID = '192.168.0.0' 
+            DnsDomain = $DomainName 
+            DnsServerIPAddress = '192.168.0.1' 
+            AddressFamily = 'IPv4' 
+            Router = '192.168.0.1'
+            DependsOn = @("[WindowsFeature]Install DHCPServer", "[xIPAddress]New IP for vEthernet $vSwitchNameMgmt")
         }
 
         xDhcpServerOption "Option" 
