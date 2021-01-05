@@ -368,7 +368,7 @@
             IPStartRange = '192.168.0.220' 
             IPEndRange = '192.168.0.240' 
             ScopeId = '192.168.0.0'
-            Name = 'Client Address Range for Nested VMs on AzSHCI Cluster' 
+            Name = 'Management Address Range for VMs on AzSHCI Cluster' 
             SubnetMask = '255.255.255.0' 
             LeaseDuration = '00:08:00' 
             State = 'Active' 
