@@ -504,8 +504,8 @@
                 VhdPath         = "$targetVMPath\$vmname\$vmname-OSDisk.vhdx"
                 Path            = $targetVMPath
                 Generation      = 2
-                StartupMemory   = 8GB
-                ProcessorCount  = 2
+                StartupMemory   = 10GB
+                ProcessorCount  = 4
                 DependsOn       = "[xVhd]NewOSDisk-$vmname"
             }
 
@@ -526,6 +526,31 @@
                 DependsOn = "[xVMHyperV]VM-$vmname"
             }
 #>
+            script "remove default Network Adapter on VM-$vmname"
+            {
+                GetScript = {
+                    $VMNetworkAdapter = Get-VMNetworkAdapter -VMName $using:vmname -Name 'Network Adapter' -ErrorAction SilentlyContinue
+                    $result = if ($VMNetworkAdapter) {$false} else {$true}
+                    return @{
+                        VMName = $VMNetworkAdapter.VMName
+                        Name = $VMNetworkAdapter.Name
+                        Result = $result
+                    }
+                }
+    
+                SetScript = {
+                    $state = [scriptblock]::Create($GetScript).Invoke()
+                    Remove-VMNetworkAdapter -VMName $state.VMName -Name $state.Name                 
+                }
+    
+                TestScript = {
+                    # Create and invoke a scriptblock using the $GetScript automatic variable, which contains a string representation of the GetScript.
+                    $state = [scriptblock]::Create($GetScript).Invoke()
+                    return $state.Result
+                }
+                DependsOn = "[xVMHyperV]VM-$vmname"
+            }
+
             xVMNetworkAdapter "add Management Network Adapter on VM-$vmname"
             {
                 Id = "$vmname-Management"
@@ -715,7 +740,7 @@
             VhdPath         = "$targetVMPath\$wacVMName\$wacVMName-OSDisk.vhdx"
             Path            = $targetVMPath
             Generation      = 2
-            StartupMemory   = 8GB
+            StartupMemory   = 4GB
             ProcessorCount  = 2
             DependsOn       = "[xVhd]NewOSDisk-$wacVMName"
         }
