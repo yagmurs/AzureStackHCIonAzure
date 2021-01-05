@@ -390,7 +390,7 @@
             DependsOn = @("[WindowsFeature]Install DHCPServer", "[xIPAddress]New IP for vEthernet $vSwitchNameConverged")
         }
 
-        xDhcpServerOption "Option" 
+        xDhcpServerOption "Option 192.168.0.0" 
         { 
             Ensure = 'Present' 
             ScopeID = '192.168.0.0' 
@@ -401,7 +401,7 @@
             DependsOn = @("[WindowsFeature]Install DHCPServer", "[xIPAddress]New IP for vEthernet $vSwitchNameMgmt")
         }
 
-        xDhcpServerOption "Option" 
+        xDhcpServerOption "Option 192.168.100.0" 
         { 
             Ensure = 'Present' 
             ScopeID = '192.168.100.0' 
