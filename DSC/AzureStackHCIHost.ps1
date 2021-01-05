@@ -730,7 +730,7 @@
             Generation       = 'vhdx'
             ParentPath       = $ws2019VhdPath
             Type             = 'Differencing'
-            DependsOn = "[xVMSwitch]$vSwitchNameMgmt", "[script]prepareVHDX win2019", "[file]VM-Folder-$wacVMName"
+            DependsOn = "[xVMSwitch]$vSwitchNameMgmt", "[script]prepareVHDX ws2019", "[file]VM-Folder-$wacVMName"
         }
 
         xVMHyperV "VM-$wacVMName"
