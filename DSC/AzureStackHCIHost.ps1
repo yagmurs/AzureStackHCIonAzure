@@ -578,8 +578,8 @@
 
             xVMNetworkAdapter "New Network Adapter Management VM-$vmname"
             {
-                Id = "Management"
-                Name = "Management"
+                Id = "$vmname-Management"
+                Name = "$vmname-Management"
                 SwitchName = $vSwitchNameMgmt
                 VMName = $vmname
                 NetworkSetting = xNetworkSettings {
@@ -594,8 +594,8 @@
 
             xVMNetworkAdapter "New Network Adapter Converged $('VM-' + $vmname + '-Nic1')"
             {
-                Id = "Converged-Nic1"
-                Name = "Converged-Nic1"
+                Id = "$vmname-Converged-Nic1"
+                Name = "$vmname-Converged-Nic1"
                 SwitchName = $vSwitchNameConverged
                 VMName = $vmname
                 NetworkSetting = xNetworkSettings {
@@ -608,8 +608,8 @@
 
             xVMNetworkAdapter "New Network Adapter Converged $('VM-' + $vmname + '-Nic2')"
             {
-                Id = "Converged-Nic2"
-                Name = "Converged-Nic2"
+                Id = "$vmname-Converged-Nic2"
+                Name = "$vmname-Converged-Nic2"
                 SwitchName = $vSwitchNameConverged
                 VMName = $vmname
                 NetworkSetting = xNetworkSettings {
@@ -782,8 +782,8 @@
 
         xVMNetworkAdapter "New Network Adapter Management for VM-$wacVMName"
         {
-            Id = "Management"
-            Name = "Management"
+            Id = "$wacVMName-Management"
+            Name = "$wacVMName-Management"
             SwitchName = $vSwitchNameMgmt
             VMName = $wacVMName
             NetworkSetting = xNetworkSettings {
