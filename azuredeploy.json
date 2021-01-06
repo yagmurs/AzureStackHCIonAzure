@@ -153,7 +153,17 @@
             "metadata": {
                 "description": "Load balancer name."
             }
+        },
+        "branch": {
+            "type": "string",
+            "defaultValue": "master",
+            "metadata": {
+                "description": "for branch selection leave master if you are not the contributor and developing the ARM template"
+            }
         }
+    },
+    "variables": {
+        "dscUri": "[concat('https://github.com/yagmurs/AzureStackHCIonAzure/raw', parameters('branch'), '/DSC/AzureStackHCIHost.zip')]"
     },
     "resources": [
         {
@@ -295,6 +305,7 @@
                 "[parameters('loadBalancerName')]"
             ],
             "properties": {
+                "licenseType": "Windows_Server",
                 "hardwareProfile": {
                     "vmSize": "[parameters('vmSize')]"
                 },
@@ -367,7 +378,7 @@
                         "typeHandlerVersion": "2.19",
                         "autoUpgradeMinorVersion": true,
                         "settings": {
-                            "ModulesUrl": "https://github.com/yagmurs/AzureStackHCIonAzure/raw/master/DSC/AzureStackHCIHost.zip",
+                            "ModulesUrl": "[variables('dscUri')]",
                             "ConfigurationFunction": "AzureStackHCIHost.ps1\\AzureStackHCIHost",
                             "Properties": {
                                 "DomainName": "[parameters('domainName')]",

@@ -582,12 +582,14 @@
                 Name = "$vmname-Management"
                 SwitchName = $vSwitchNameMgmt
                 VMName = $vmname
+                <#
                 NetworkSetting = xNetworkSettings {
                     IpAddress = $ipAddressManagement
                     Subnet = "255.255.255.0"
                     DefaultGateway = "192.168.0.1"
                     DnsServer = "192.168.0.1"
                 }
+                #>
                 Ensure = 'Present'
                 DependsOn = "[xVMHyperV]VM-$vmname"
             }

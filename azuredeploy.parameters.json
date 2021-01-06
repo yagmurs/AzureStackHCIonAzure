@@ -64,6 +64,9 @@
         },
         "_artifactsLocationSasToken": {
             "value": ""
+        },
+        "branch": {
+            "value": "master"
         }
     }
 }
