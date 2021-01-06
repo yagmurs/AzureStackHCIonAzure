@@ -365,12 +365,12 @@
         xDhcpServerScope "Scope 192.168.0.0" 
         { 
             Ensure = 'Present'
-            IPStartRange = '192.168.0.220' 
+            IPStartRange = '192.168.0.150' 
             IPEndRange = '192.168.0.240' 
             ScopeId = '192.168.0.0'
             Name = 'Management Address Range for VMs on AzSHCI Cluster' 
             SubnetMask = '255.255.255.0' 
-            LeaseDuration = '00:08:00' 
+            LeaseDuration = '02.00:00:00' 
             State = 'Active' 
             AddressFamily = 'IPv4'
             DependsOn = @("[WindowsFeature]Install DHCPServer", "[xIPAddress]New IP for vEthernet $vSwitchNameMgmt")
@@ -384,7 +384,7 @@
             ScopeId = '192.168.100.0'
             Name = 'Client Address Range for Nested VMs on AzSHCI Cluster' 
             SubnetMask = '255.255.255.0' 
-            LeaseDuration = '00:08:00' 
+            LeaseDuration = '02.00:00:00' 
             State = 'Active' 
             AddressFamily = 'IPv4'
             DependsOn = @("[WindowsFeature]Install DHCPServer", "[xIPAddress]New IP for vEthernet $vSwitchNameConverged")
