@@ -49,15 +49,17 @@ configuration WindowsAdminCenter
         script "Windows Admin Center updater"
         {
             GetScript = {
+                # Specify the WAC gateway
+                $wac = "https://$env:COMPUTERNAME"
+                
+                $null = Invoke-WebRequest -Uri $wac -SkipCertificateCheck -UseBasicParsing
+
                 # Add the module to the current session
                 $module = "$env:ProgramFiles\Windows Admin Center\PowerShell\Modules\ExtensionTools"
                 Import-Module -Name $module -Verbose
                 
-                # Specify the WAC gateway
-                $WAC = "https://$env:COMPUTERNAME"
-                
                 # List the WAC extensions
-                $extensions = Get-Extension $WAC | Where-Object {$_.isLatestVersion -like 'False'}
+                $extensions = Get-Extension $wac | Where-Object {$_.isLatestVersion -like 'False'}
                 
                 $result = if ($extensions.count -gt 0) {$false} else {$true}
 
@@ -73,14 +75,16 @@ configuration WindowsAdminCenter
                 return $state.Result
             }
             SetScript = {
+                $wac = "https://$env:COMPUTERNAME"
+                
+                $null = Invoke-WebRequest -Uri $wac -SkipCertificateCheck -UseBasicParsing
+
+                # Add the module to the current session
                 $module = "$env:ProgramFiles\Windows Admin Center\PowerShell\Modules\ExtensionTools"
                 Import-Module -Name $module -Verbose
-
-                # Specify the WAC gateway
-                $WAC = "https://$env:COMPUTERNAME"
                 
                 # List the WAC extensions
-                $extensions = Get-Extension $WAC | Where-Object {$_.isLatestVersion -like 'False'}
+                $extensions = Get-Extension $wac | Where-Object {$_.isLatestVersion -like 'False'}
 
                 $date = get-date -f yyyy-MM-dd
 
