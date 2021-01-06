@@ -52,7 +52,9 @@
 
         [string]$HCIvmPrefix = "hpv",
 
-        [string]$wacVMName = "wac"
+        [string]$wacVMName = "wac",
+
+        [int]$azsHCIHostMemory,
     ) 
     
     Import-DscResource -ModuleName 'xActiveDirectory'
@@ -502,6 +504,7 @@
             $ipAddressManagement = $("192.168.0.1" + $suffix)
             $ipAddressNic1 = $("192.168.254.1" + $suffix)
             $ipAddressNic2 = $("192.168.255.1" + $suffix)
+            $memory = "$azsHCIHostMemory" + 'GB'
 
             file "VM-Folder-$vmname"
             {
@@ -529,7 +532,7 @@
                 VhdPath         = "$targetVMPath\$vmname\$vmname-OSDisk.vhdx"
                 Path            = $targetVMPath
                 Generation      = 2
-                StartupMemory   = 10GB
+                StartupMemory   = $memory
                 ProcessorCount  = 4
                 DependsOn       = "[xVhd]NewOSDisk-$vmname"
             }
@@ -767,7 +770,9 @@
             VhdPath         = "$targetVMPath\$wacVMName\$wacVMName-OSDisk.vhdx"
             Path            = $targetVMPath
             Generation      = 2
-            StartupMemory   = 4GB
+            StartupMemory   = 8GB
+            MinimumMemory   = 8GB
+            MaximumMemory   = 16GB
             ProcessorCount  = 2
             DependsOn       = "[xVhd]NewOSDisk-$wacVMName"
         }

@@ -67,6 +67,12 @@
         },
         "branch": {
             "value": "master"
+        },
+        "azsHCIHostMemory": {
+            "value": "16"
+        },
+        "azsHCIDataDiskSize": {
+            "value": "512"
         }
     }
 }
