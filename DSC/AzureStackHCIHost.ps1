@@ -64,8 +64,9 @@
     Import-DscResource -ModuleName 'ComputerManagementDsc'
     Import-DscResource -ModuleName 'xHyper-v'
     Import-DscResource -ModuleName 'xPSDesiredStateConfiguration'
-    Import-DscResource -module 'xDHCpServer'
-    Import-DscResource -Module 'cChoco'
+    Import-DscResource -ModuleName 'xDHCpServer'
+    Import-DscResource -ModuleName 'cChoco'
+    Import-DscResource -ModuleName 'DSCR_Shortcut'
     
     $wacMofUri = "https://raw.githubusercontent.com/yagmurs/AzureStackHCIonAzure/$branch/helpers/Install-WacUsingChoco.ps1"
     [System.Management.Automation.PSCredential]$DomainCreds = New-Object System.Management.Automation.PSCredential ("${DomainName}\$($Admincreds.UserName)", $Admincreds.Password)
@@ -152,6 +153,22 @@
             ValueName = "https"
             ValueData = 1
             ValueType = 'Dword'
+        }
+
+        cShortcut "Wac Shortcut"
+        {
+            Path      = 'C:\Users\Public\Desktop\Windows Admin Center.lnk'
+            Target    = 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
+            Arguments = 'https://wac'
+            Icon      = 'shell32.dll,34'
+        }
+
+        cShortcut "Document Shortcut"
+        {
+            Path      = 'C:\Users\Public\Desktop\Poc Guide.lnk'
+            Target    = 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
+            Arguments = 'https://github.com/yagmurs/AzureStackHCIonAzure/blob/master/readme.md'
+            Icon      = 'shell32.dll,74'
         }
 <#
         script "Download Windows Admin Center"
