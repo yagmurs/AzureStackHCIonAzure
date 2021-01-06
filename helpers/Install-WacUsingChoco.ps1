@@ -49,14 +49,14 @@ configuration WindowsAdminCenter
         script "Windows Admin Center updater"
         {
             GetScript = {
+                
                 # Specify the WAC gateway
                 $wac = "https://$env:COMPUTERNAME"
                 
-                $null = Invoke-WebRequest -Uri $wac -SkipCertificateCheck -UseBasicParsing
-
                 # Add the module to the current session
-                $module = "$env:ProgramFiles\Windows Admin Center\PowerShell\Modules\ExtensionTools"
-                Import-Module -Name $module -Verbose
+                $module = "$env:ProgramFiles\Windows Admin Center\PowerShell\Modules\ExtensionTools\ExtensionTools.psm1"
+
+                Import-Module -Name $module -Verbose -Force
                 
                 # List the WAC extensions
                 $extensions = Get-Extension $wac | Where-Object {$_.isLatestVersion -like 'False'}
@@ -75,16 +75,7 @@ configuration WindowsAdminCenter
                 return $state.Result
             }
             SetScript = {
-                $wac = "https://$env:COMPUTERNAME"
-                
-                $null = Invoke-WebRequest -Uri $wac -SkipCertificateCheck -UseBasicParsing
-
-                # Add the module to the current session
-                $module = "$env:ProgramFiles\Windows Admin Center\PowerShell\Modules\ExtensionTools"
-                Import-Module -Name $module -Verbose
-                
-                # List the WAC extensions
-                $extensions = Get-Extension $wac | Where-Object {$_.isLatestVersion -like 'False'}
+                $state = [scriptblock]::Create($GetScript).Invoke()
 
                 $date = get-date -f yyyy-MM-dd
 
@@ -92,9 +83,9 @@ configuration WindowsAdminCenter
 
                 New-Item -Path $logFile -ItemType File -Force
                 
-                ForEach($extension in $extensions)
+                ForEach($extension in $state.extensions)
                 {    
-                    Update-Extension $wac -ExtensionId $extension.Id -Verbose | Out-File -Append -FilePath $logFile -Force
+                    Update-Extension $state.wac -ExtensionId $extension.Id -Verbose | Out-File -Append -FilePath $logFile -Force
                 }
 
                 # Delete log files older than 30 days
@@ -117,26 +108,11 @@ Remove-DscConfigurationDocument -Stage Current, Previous, Pending -Force
 WindowsAdminCenter -OutputPath $DscConfigLocation 
 
 Set-DscLocalConfigurationManager -Path $DscConfigLocation -Verbose
+
 Start-DscConfiguration -Path $DscConfigLocation -Wait -Verbose
 
-$i = 0
-do
-{
-    Write-Verbose "Sleeping for 5 seconds to Check LCM State set to 'Idle'" -Verbose
-    Start-Sleep -Seconds 5
-    $i++
-    if ($i -gt 12)
-    {
-        Write-Verbose "Gave up sleeping!! Current configuration will be applied forcefully" -Verbose
-        Start-DscConfiguration -UseExisting -Wait -Verbose -Force
-        Stop-Transcript
-        Logoff
-    }
-}
-until ((Get-DscLocalConfigurationManager |Select-Object -ExpandProperty lcmstate) -eq "Idle")
-
-Start-DscConfiguration -UseExisting -Wait -Verbose
+Start-DscConfiguration -UseExisting -Wait -Verbose -Force
 
 Stop-Transcript
 
-Logoff
+#Logoff
