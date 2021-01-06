@@ -30,7 +30,7 @@
         },
         "vmSize": {
             "type": "string",
-            "defaultValue": "Standard_E4s_v4",
+            "defaultValue": "Standard_E8s_v4",
             "metadata": {
                 "description": "Size of the VM that supports Nested virtualization"
             }
@@ -163,7 +163,7 @@
         }
     },
     "variables": {
-        "dscUri": "[concat('https://github.com/yagmurs/AzureStackHCIonAzure/raw', parameters('branch'), '/DSC/AzureStackHCIHost.zip')]"
+        "dscUri": "[concat('https://github.com/yagmurs/AzureStackHCIonAzure/raw/', parameters('branch'), '/DSC/AzureStackHCIHost.zip')]"
     },
     "resources": [
         {
