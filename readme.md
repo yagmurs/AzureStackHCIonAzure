@@ -50,7 +50,7 @@ Start-DscConfiguration -UseExisting -Wait -Verbose -ComputerName Wac
 & "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" https://wac
 ```
 
-Highly recommended to run following Powershell code to overcome possible kerberos related configuration issues. Following code pre-stage computer accounts and delegate Windows Admin Center computer and also allow Full control access for Cluster CNO on the new OU.
+Highly recommended to run following Powershell code to overcome possible kerberos related configuration issues. Following code creates new OU, pre-stage computer accounts and delegate all computers in the OU to Windows Admin Center computer and also allow set Full control access to Cluster CNO on the new OU.
 
 ```powershell
 
@@ -86,8 +86,6 @@ Set-ACL -ACLObject $acl -Path "AD:\$dn"
 
 ```
 
-Add https://wac to Internet Explorer Intranet zone to be able to use SSO.
-
 Open Edge browser installed on Azure Vm and connect to https://wac and invoke Azure Stack HCI wizard. And follow the steps. 192.168.0.11 can be used as cluster static Ip address during Azure Stack HCI cluster creation.
 
 Once you have deployed your Azure Stack HCI cluster, You can use 192.168.100.0/24 to let them use DHCP server configured on Azure VM. So all VMs would be able to connect to Internet.
@@ -106,7 +104,7 @@ Once you have deployed your Azure Stack HCI cluster, You can use 192.168.100.0/2
 
 <!--- <img src="./.images/azshciusingwac.gif" data-canonical-src="./.images/azshciusingwac.gif" width="1280" height="720" /> --->
 
-### VMs in the nested environment messed up?
+### VMs in the nested environment messed up / willing to Reset?
 
 Just run the following PowerShell code on the Azure Host. It will re-create Azure Stack HCI image from scratch. Will take about 3-5 mins to complete this task including WAC deployment.
 
@@ -164,5 +162,3 @@ Feel free to file new feature requests as an issue on GitHub, just like a bug.
  > Yagmur Sahin
  >
  > Twitter: [@yagmurs](https://twitter.com/yagmurs)
-
-
