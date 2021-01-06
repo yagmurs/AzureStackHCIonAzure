@@ -155,15 +155,15 @@
             }
         },
         "azsHCIHostMemory": {
-            "type": "string",
-            "defaultValue": "16",
+            "type": "int",
+            "defaultValue": 16,
             "metadata": {
                 "description": "Azure Stack HCI memory amount in GB"
             }
         },
         "azsHCIDataDiskSize": {
-            "type": "string",
-            "defaultValue": "512",
+            "type": "int",
+            "defaultValue": 512,
             "metadata": {
                 "description": "Azure VM additional disk size for hosting Azure Stack HCI VMs amount in GB"
             }

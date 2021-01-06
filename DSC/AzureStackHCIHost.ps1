@@ -505,7 +505,7 @@
             $ipAddressManagement = $("192.168.0.1" + $suffix)
             $ipAddressNic1 = $("192.168.254.1" + $suffix)
             $ipAddressNic2 = $("192.168.255.1" + $suffix)
-            $memory = "$azsHCIHostMemory" + 'GB'
+            $memory = $azsHCIHostMemory * 1gb
 
             file "VM-Folder-$vmname"
             {
