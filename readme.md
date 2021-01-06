@@ -23,7 +23,7 @@ This ARM template and DSC extension prepares Azure VM as Hyper-v host (also Doma
 Deploy the ARM template (above buttons) by providing all the parameters required. Most of the parameters have default values and sufficient for demostrate Azure Stack HCI features and deployment procedures.
 Windows Admin Center is also configured with DSC using Choco which means will be updated once released in Choco repository. All installed extensions are getting updated daily in the background.
 
-Note that all VMs deployed within the Azure VM use **same password** that has been specified in the ARM template. 
+Note that all VMs deployed within the Azure VM use **same password** that has been specified in the ARM template.
 
 * All Local accounts are named as **Administrator**.
 * The **Domain Administrator** username is the **Username specified in the ARM template**.
@@ -38,7 +38,56 @@ Once the deployment completed. There will be HPV01 and HPV02 and so on (based on
 
 #### Deploying Azure Stack using Windows Admin Center
 
-Open Edge browser installed on Azure Vm and connect to https://192.168.0.100 and invoke Azure Stack HCI wizard. And follow the steps. You can use 192.168.0.200 as cluster static Ip address.
+Before connecting to Windows Admin Center, run the following PowerShell code on Azure VM to trigger DSC configuration on WAC to make sure that all Windows Admin Center extensions updated.
+
+Note: The following code will trigger Chromium based Edge and connect to WAC then start running updater.
+
+```powershell
+
+& "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" https://wac
+Start-DscConfiguration -UseExisting -Wait -Verbose -ComputerName Wac
+
+```
+
+Highly recommended to run following Powershell code to overcome possible kerberos related configuration issues. Following code pre-stage computer accounts and delegate Windows Admin Center computer and also allow Full control access for Cluster CNO on the new OU.
+
+```powershell
+
+#variables
+$wac = "wac"
+$AzureStackHCIHosts = @("hpv01", "hpv02")
+$AzureStackHCIClusterName = "hci01"
+$servers = $AzureStackHCIHosts + $AzureStackHCIClusterName
+$ouName = "Cluster0"
+
+#New organizational Unit for cluster
+$dn = New-ADOrganizationalUnit -Name $ouName -PassThru
+
+#New Wac Computer Object in default OU/container
+$wacObject = New-AdComputer -name $wac -PassThru
+
+#New Azure Stack HCI hosts and Cluster CNO
+$servers | ForEach-Object {$serversObject = New-ADComputer -Name $_ -Path $dn -PrincipalsAllowedToDelegateToAccount $wacObject}
+
+#read OU DACL
+$acl = Get-Acl -Path "AD:\$dn"
+
+# Set properties to allow Cluster CNO to Full Control on the new OU
+$identity = (Get-ADComputer -Identity $AzureStackHCIClusterName)
+$principal = New-Object System.Security.Principal.SecurityIdentifier ($identity).SID
+$ace = New-Object System.DirectoryServices.ActiveDirectoryAccessRule($principal, [System.DirectoryServices.ActiveDirectoryRights]::GenericAll, [System.Security.AccessControl.AccessControlType]::Allow, [DirectoryServices.ActiveDirectorySecurityInheritance]::All)
+
+#modify DACL
+$acl.AddAccessRule($ace)
+
+#Re-apply the modified DACL to the OU
+Set-ACL -ACLObject $acl -Path "AD:\$dn"
+
+```
+
+Add https://wac to Internet Explorer Intranet zone to be able to use SSO.
+
+Open Edge browser installed on Azure Vm and connect to https://wac and invoke Azure Stack HCI wizard. And follow the steps. 192.168.0.11 can be used as cluster static Ip address during Azure Stack HCI cluster creation.
 
 Once you have deployed your Azure Stack HCI cluster, You can use 192.168.100.0/24 to let them use DHCP server configured on Azure VM. So all VMs would be able to connect to Internet.
 
@@ -49,6 +98,12 @@ Once you have deployed your Azure Stack HCI cluster, You can use 192.168.100.0/2
 ```powershell
 
 ```
+
+### How to deploy Azure Stack HCI using Windows Admin Center
+
+<img src="./.images/azshciusingwac.gif" width="1280" height="720" />
+
+<!--- <img src="./.images/azshciusingwac.gif" data-canonical-src="./.images/azshciusingwac.gif" width="1280" height="720" /> --->
 
 ### VMs in the nested environment messed up?
 
@@ -103,3 +158,5 @@ Feel free to file new feature requests as an issue on GitHub, just like a bug.
  > Yagmur Sahin
  >
  > Twitter: [@yagmurs](https://twitter.com/yagmurs)
+
+
