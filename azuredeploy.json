@@ -453,9 +453,13 @@
         }
     ],
     "outputs": {
-        "branch": {
+        "dscUri": {
             "type": "string",
             "value": "[variables('dscUri')]"
-        }        
+        },
+        "branch": {
+            "type": "string",
+            "value": "[parameters('branch')]"
+        }    
     }
 }
