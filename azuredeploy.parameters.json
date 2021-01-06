@@ -69,10 +69,10 @@
             "value": "master"
         },
         "azsHCIHostMemory": {
-            "value": "16"
+            "value": 16
         },
         "azsHCIDataDiskSize": {
-            "value": "512"
+            "value": 512
         }
     }
 }
