@@ -64,7 +64,7 @@ $ouName = "Cluster0"
 $dn = New-ADOrganizationalUnit -Name $ouName -PassThru
 
 #New Wac Computer Object in default OU/container
-$wacObject = New-AdComputer -name $wac -PassThru
+$wacObject = Get-AdComputer -name $wac -PassThru
 
 #New Azure Stack HCI hosts and Cluster CNO
 $servers | ForEach-Object {$serversObject = New-ADComputer -Name $_ -Path $dn -PrincipalsAllowedToDelegateToAccount $wacObject}
@@ -110,9 +110,14 @@ Once you have deployed your Azure Stack HCI cluster, You can use 192.168.100.0/2
 Just run the following PowerShell code on the Azure Host. It will re-create Azure Stack HCI image from scratch. Will take about 3-5 mins to complete this task including WAC deployment.
 
 ```powershell
-Get-VM hpv*, wac | Stop-VM -TurnOff -Passthru | Remove-VM -Force
+#remove Azure Stack HCI hosts
+Get-VM hpv* | Stop-VM -TurnOff -Passthru | Remove-VM -Force
+Remove-Item -Path "V:\VMs\hpv*" -Recurse -Force
 
-Remove-Item -Path "V:\VMs\hpv*", "V:\VMs\wac" -Recurse -Force
+#remove Windows Aadmin Center host
+Get-VM wac | Stop-VM -TurnOff -Passthru | Remove-VM -Force
+Remove-Item -Path "V:\VMs\wac" -Recurse -Force
+
 Remove-Item -Path "V:\source\Install-WacUsingChoco.ps1" -Force #in case if updated.
 
 Start-DscConfiguration -UseExisting -Wait -Verbose -Force
