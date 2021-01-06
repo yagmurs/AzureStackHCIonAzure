@@ -129,6 +129,30 @@
             DestinationPath = $baseVHDFolderPath
             DependsOn = "[File]folder-vms"
         } 
+
+        Registry "Disable Internet Explorer ESC for Admin"
+        {
+            Key = "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A7-37EF-4b3f-8CFC-4F3A74704073}"
+            ValueName = "IsInstalled"
+            ValueData = "0"
+            ValueType = "Dword"
+        }
+
+        Registry "Disable Internet Explorer ESC for User"
+        {
+            Key = "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A8-37EF-4b3f-8CFC-4F3A74704073}"
+            ValueName = "IsInstalled"
+            ValueData = "0"
+            ValueType = "Dword"
+        }
+
+        Registry "Add Wac to Intranet zone for SSO"
+        {
+            Key = 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Internet Settings\ZoneMap\EscDomains\wac'
+            ValueName = "https"
+            ValueData = 1
+            ValueType = 'Dword'
+        }
 <#
         script "Download Windows Admin Center"
         {
