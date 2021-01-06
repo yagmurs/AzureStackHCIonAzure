@@ -170,6 +170,13 @@
             Arguments = 'https://github.com/yagmurs/AzureStackHCIonAzure/blob/master/readme.md'
             Icon      = 'shell32.dll,74'
         }
+
+        ScheduledTask "Disable Server Manager at Startup"
+        {
+            TaskName = 'ServerManager'
+            Enable = $false
+        }
+        
 <#
         script "Download Windows Admin Center"
         {
