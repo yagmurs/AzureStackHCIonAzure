@@ -61,7 +61,7 @@
     Import-DscResource -ModuleName 'xStorage'
     Import-DscResource -ModuleName 'xNetworking'
     Import-DscResource -ModuleName 'PSDesiredStateConfiguration'
-    Import-DscResource -ModuleName 'xPendingReboot'
+    Import-DscResource -ModuleName 'ComputerManagementDsc'
     Import-DscResource -ModuleName 'xHyper-v'
     Import-DscResource -ModuleName 'xPSDesiredStateConfiguration'
     Import-DscResource -module 'xDHCpServer'
@@ -858,7 +858,8 @@
                     #Copy-Item -Path "$using:sourcePath\pending.mof" -Destination $("$driveLetter" + ":" + "\Windows\system32\Configuration\pending.mof") -Force
                     
                     Copy-Item -Path "C:\Program Files\WindowsPowerShell\Modules\cChoco" -Destination $("$driveLetter" + ":" + "\Program Files\WindowsPowerShell\Modules") -Recurse -Force -ErrorAction Stop
-
+                    Copy-Item -Path "C:\Program Files\WindowsPowerShell\Modules\ComputerManagementDsc" -Destination $("$driveLetter" + ":" + "\Program Files\WindowsPowerShell\Modules") -Recurse -Force -ErrorAction Stop
+                    
                     Start-Sleep -Seconds 2
                     
                 }
