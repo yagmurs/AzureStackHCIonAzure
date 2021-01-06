@@ -175,8 +175,9 @@
         {
             TaskName = 'ServerManager'
             Enable = $false
+            TaskPath = '\Microsoft\Windows\Server Manager'
         }
-        
+
 <#
         script "Download Windows Admin Center"
         {
