@@ -1,6 +1,8 @@
 configuration WindowsAdminCenter
 {
-    Import-DscResource -ModuleName cChoco
+    Import-DscResource -ModuleName 'cChoco'
+    Import-DscResource -ModuleName 'ComputerManagementDsc'
+
     node localhost
     {
         LocalConfigurationManager {
@@ -40,12 +42,26 @@ configuration WindowsAdminCenter
             Params      = "'/Port:443'"
         }
         
-        <#
-            Inspired script resource from George Markau blog post
-            https://www.markou.me/2019/09/how-to-automatically-update-windows-admin-center-extensions/
-            Twitter: @george_markou
-            https://twitter.com/george_markou
-         #> 
+        PendingReboot "reboot"
+        {
+            Name = 'reboot'
+        }
+
+        Script "Fake reboot"
+        {
+            TestScript = {
+                return (Test-Path HKLM:\SOFTWARE\RebootKey)
+            }
+            SetScript = {
+                New-Item -Path HKLM:\SOFTWARE\RebootKey -Force
+                $global:DSCMachineStatus = 1 
+            }
+            GetScript = {
+                return @{result = 'result'}
+            }
+            DependsOn = "[cChocoPackageInstaller]Install Windows Admin Center on 443"
+        }
+        
         script "Windows Admin Center updater"
         {
             GetScript = {
@@ -91,7 +107,7 @@ configuration WindowsAdminCenter
                 # Delete log files older than 30 days
                 Get-ChildItem -Path "C:\Users\Public\WACUpdateLog*" -Recurse -Include @("*.log") | Where-Object { $_.CreationTime -lt (Get-Date).AddDays(-30)} | Remove-Item
             }
-            DependsOn = "[cChocoPackageInstaller]Install Windows Admin Center on 443"
+            DependsOn = "[Script]Fake reboot"
         }
     }
 }
@@ -115,4 +131,4 @@ Start-DscConfiguration -UseExisting -Wait -Verbose -Force
 
 Stop-Transcript
 
-#Logoff
+Logoff
