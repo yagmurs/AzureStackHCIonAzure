@@ -36,8 +36,6 @@
 
         [String]$wacUri = "https://aka.ms/wacdownload",
 
-        [String]$wacMofUri = "https://raw.githubusercontent.com/yagmurs/AzureStackHCIonAzure/master/helpers/Install-WacUsingChoco.ps1",
-
         [Int]$azsHostCount = 2,
 
         [Int]$azsHostDataDiskCount = 3,
@@ -55,6 +53,8 @@
         [string]$wacVMName = "wac",
 
         [int]$azsHCIHostMemory,
+
+        [string]$branch = "master"
     ) 
     
     Import-DscResource -ModuleName 'xActiveDirectory'
@@ -67,6 +67,7 @@
     Import-DscResource -module 'xDHCpServer'
     Import-DscResource -Module 'cChoco'
     
+    $wacMofUri = "https://raw.githubusercontent.com/yagmurs/AzureStackHCIonAzure/$branch/helpers/Install-WacUsingChoco.ps1"
     [System.Management.Automation.PSCredential]$DomainCreds = New-Object System.Management.Automation.PSCredential ("${DomainName}\$($Admincreds.UserName)", $Admincreds.Password)
     $Interface=Get-NetAdapter | Where-Object Name -Like "Ethernet*" | Select-Object -First 1
     $InterfaceAlias=$($Interface.Name)

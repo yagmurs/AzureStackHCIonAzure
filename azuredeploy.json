@@ -401,7 +401,8 @@
                                     "Password": "PrivateSettingsRef:AdminPassword"
                                 },
                                 "azsHostCount": "[parameters('azsHCIHostCount')]",
-                                "azsHCIHostMemory": "[parameters('azsHCIHostMemory')]"
+                                "azsHCIHostMemory": "[parameters('azsHCIHostMemory')]",
+                                "branch": "[parameters('branch')]"
                             }
                         },
                         "protectedSettings": {
