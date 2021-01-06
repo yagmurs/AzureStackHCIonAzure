@@ -35,20 +35,6 @@
                 "description": "Size of the VM that supports Nested virtualization"
             }
         },
-        "_artifactsLocation": {
-            "type": "string",
-            "metadata": {
-                "description": "The location of resources, such as templates and DSC modules, that the template depends on"
-            },
-            "defaultValue": "https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/active-directory-new-domain/"
-        },
-        "_artifactsLocationSasToken": {
-            "type": "securestring",
-            "metadata": {
-                "description": "Auto-generated token to access _artifactsLocation. Leave it blank unless you need to provide your own value."
-            },
-            "defaultValue": ""
-        },
         "location": {
             "type": "string",
             "defaultValue": "[resourceGroup().location]",
@@ -63,18 +49,11 @@
                 "description": "Virtual machine name."
             }
         },
-        "azsHCIHostCount": {
-            "type": "int",
-            "defaultValue": 2,
-            "metadata": {
-                "description": "How many Azure Stack HCI nested hosts to be created within the Azure VM."
-            }
-        },
-        "virtualNetworkName": {
+        "privateIPAddress": {
             "type": "string",
-            "defaultValue": "AzSHci-VNET",
+            "defaultValue": "10.0.0.4",
             "metadata": {
-                "description": "Virtual network name."
+                "description": "Private IP address for Azure VM, will be used as DNS address for vNet."
             }
         },
         "virtualNetworkAddressRange": {
@@ -84,48 +63,6 @@
                 "description": "Virtual network address range."
             }
         },
-        "loadBalancerFrontEndIPName": {
-            "type": "string",
-            "defaultValue": "LBFE",
-            "metadata": {
-                "description": "Load balancer front end IP address name."
-            }
-        },
-        "backendAddressPoolName": {
-            "type": "string",
-            "defaultValue": "LBBE",
-            "metadata": {
-                "description": "Backend address pool name."
-            }
-        },
-        "inboundNatRulesName": {
-            "type": "string",
-            "defaultValue": "DcRDP",
-            "metadata": {
-                "description": "Inbound NAT rules name."
-            }
-        },
-        "networkInterfaceName": {
-            "type": "string",
-            "defaultValue": "DcNic",
-            "metadata": {
-                "description": "Network interface name."
-            }
-        },
-        "privateIPAddress": {
-            "type": "string",
-            "defaultValue": "10.0.0.4",
-            "metadata": {
-                "description": "Private IP address."
-            }
-        },
-        "subnetName": {
-            "type": "string",
-            "defaultValue": "AzSHciSubnet1",
-            "metadata": {
-                "description": "Subnet name."
-            }
-        },
         "subnetRange": {
             "type": "string",
             "defaultValue": "10.0.0.0/24",
@@ -133,25 +70,18 @@
                 "description": "Subnet IP range."
             }
         },
-        "publicIPAddressName": {
-            "type": "string",
-            "defaultValue": "DcVmPublicIP",
+        "vmStoreDiskSize": {
+            "type": "int",
+            "defaultValue": 512,
             "metadata": {
-                "description": "Subnet IP range."
+                "description": "Azure VM additional disk size for hosting Azure Stack HCI VMs amount in GB"
             }
         },
-        "availabilitySetName": {
-            "type": "string",
-            "defaultValue": "DcAvailabiltySet",
+        "azsHCIHostCount": {
+            "type": "int",
+            "defaultValue": 2,
             "metadata": {
-                "description": "Availability set name."
-            }
-        },
-        "loadBalancerName": {
-            "type": "string",
-            "defaultValue": "DcLoadBalancer",
-            "metadata": {
-                "description": "Load balancer name."
+                "description": "How many Azure Stack HCI nested hosts to be created within the Azure VM."
             }
         },
         "azsHCIHostMemory": {
@@ -159,13 +89,6 @@
             "defaultValue": 16,
             "metadata": {
                 "description": "Azure Stack HCI memory amount in GB"
-            }
-        },
-        "azsHCIDataDiskSize": {
-            "type": "int",
-            "defaultValue": 512,
-            "metadata": {
-                "description": "Azure VM additional disk size for hosting Azure Stack HCI VMs amount in GB"
             }
         },
         "branch": {
@@ -177,32 +100,25 @@
         }
     },
     "variables": {
-        "dscUri": "[concat('https://github.com/yagmurs/AzureStackHCIonAzure/raw/', parameters('branch'), '/DSC/AzureStackHCIHost.zip')]"
+        "dscUri": "[concat('https://github.com/yagmurs/AzureStackHCIonAzure/raw/', parameters('branch'), '/DSC/AzureStackHCIHost.zip')]",
+        "_artifactsLocation": "https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/active-directory-new-domain/",
+        "networkSecurityGroupName": "[concat(parameters('virtualMachineName'),'-nsg')]",
+        "publicIpAddressName": "[concat(parameters('virtualMachineName'),'-pip')]",
+        "virtualNetworkName": "[concat(parameters('virtualMachineName'),'-vnet')]",
+        "networkInterfaceName": "[concat(parameters('virtualMachineName'),'-nic')]",
+        "subnetName": "[concat(parameters('virtualMachineName'),'-subnet')]"
     },
     "resources": [
         {
             "type": "Microsoft.Network/publicIPAddresses",
-            "apiVersion": "2019-02-01",
-            "name": "[parameters('publicIPAddressName')]",
+            "apiVersion": "2020-05-01",
+            "name": "[variables('publicIPAddressName')]",
             "location": "[parameters('location')]",
             "properties": {
-                "publicIPAllocationMethod": "Static",
+                "publicIPAllocationMethod": "Dynamic",
                 "dnsSettings": {
                     "domainNameLabel": "[parameters('dnsPrefix')]"
                 }
-            }
-        },
-        {
-            "type": "Microsoft.Compute/availabilitySets",
-            "apiVersion": "2019-03-01",
-            "location": "[parameters('location')]",
-            "name": "[parameters('availabilitySetName')]",
-            "properties": {
-                "PlatformUpdateDomainCount": 20,
-                "PlatformFaultDomainCount": 2
-            },
-            "sku": {
-                "name": "Aligned"
             }
         },
         {
@@ -212,18 +128,18 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[uri(parameters('_artifactsLocation'), concat('nestedtemplates/vnet.json', parameters('_artifactsLocationSasToken')))]",
+                    "uri": "[uri(variables('_artifactsLocation'), concat('nestedtemplates/vnet.json'))]",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
                     "virtualNetworkName": {
-                        "value": "[parameters('virtualNetworkName')]"
+                        "value": "[variables('virtualNetworkName')]"
                     },
                     "virtualNetworkAddressRange": {
                         "value": "[parameters('virtualNetworkAddressRange')]"
                     },
                     "subnetName": {
-                        "value": "[parameters('subnetName')]"
+                        "value": "[variables('subnetName')]"
                     },
                     "subnetRange": {
                         "value": "[parameters('subnetRange')]"
@@ -235,53 +151,14 @@
             }
         },
         {
-            "type": "Microsoft.Network/loadBalancers",
-            "apiVersion": "2019-02-01",
-            "name": "[parameters('loadBalancerName')]",
-            "location": "[parameters('location')]",
-            "dependsOn": [
-                "[parameters('publicIPAddressName')]"
-            ],
-            "properties": {
-                "frontendIPConfigurations": [
-                    {
-                        "name": "[parameters('loadBalancerFrontEndIPName')]",
-                        "properties": {
-                            "publicIPAddress": {
-                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPAddressName'))]"
-                            }
-                        }
-                    }
-                ],
-                "backendAddressPools": [
-                    {
-                        "name": "[parameters('backendAddressPoolName')]"
-                    }
-                ],
-                "inboundNatRules": [
-                    {
-                        "name": "[parameters('inboundNatRulesName')]",
-                        "properties": {
-                            "frontendIPConfiguration": {
-                                "id": "[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', parameters('loadBalancerName'), parameters('loadBalancerFrontEndIPName'))]"
-                            },
-                            "protocol": "Tcp",
-                            "frontendPort": 3389,
-                            "backendPort": 3389,
-                            "enableFloatingIP": false
-                        }
-                    }
-                ]
-            }
-        },
-        {
             "type": "Microsoft.Network/networkInterfaces",
-            "apiVersion": "2019-02-01",
-            "name": "[parameters('networkInterfaceName')]",
+            "apiVersion": "2020-05-01",
+            "name": "[variables('networkInterfaceName')]",
             "location": "[parameters('location')]",
             "dependsOn": [
                 "VNet",
-                "[parameters('loadBalancerName')]"
+                "[concat('Microsoft.Network/publicIpAddresses/', variables('publicIpAddressName'))]",
+                "[concat('Microsoft.Network/networkSecurityGroups/', variables('networkSecurityGroupName'))]"
             ],
             "properties": {
                 "ipConfigurations": [
@@ -291,40 +168,54 @@
                             "privateIPAllocationMethod": "Static",
                             "privateIPAddress": "[parameters('privateIPAddress')]",
                             "subnet": {
-                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworkName'), parameters('subnetName'))]"
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('subnetName'))]"
                             },
-                            "loadBalancerBackendAddressPools": [
-                                {
-                                    "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', parameters('loadBalancerName'), parameters('backendAddressPoolName'))]"
-                                }
-                            ],
-                            "loadBalancerInboundNatRules": [
-                                {
-                                    "id": "[resourceId('Microsoft.Network/loadBalancers/inboundNatRules', parameters('loadBalancerName'), parameters('inboundNatRulesName'))]"
-                                }
-                            ]
+                            "publicIPAddress": {
+                                "id": "[resourceId(resourceGroup().name,'Microsoft.Network/publicIpAddresses', variables('publicIpAddressName'))]"
+                            }
+                        }
+                    }
+                ],
+                "networkSecurityGroup": {
+                    "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+                }                
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "name": "[variables('networkSecurityGroupName')]",
+            "apiVersion": "2020-05-01",
+            "location": "[parameters('location')]",
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "default-allow-rdp",
+                        "properties": {
+                            "priority": 1000,
+                            "sourceAddressPrefix": "*",
+                            "protocol": "Tcp",
+                            "destinationPortRange": "3389",
+                            "access": "Allow",
+                            "direction": "Inbound",
+                            "sourcePortRange": "*",
+                            "destinationAddressPrefix": "*"
                         }
                     }
                 ]
             }
-        },
+        },        
         {
             "type": "Microsoft.Compute/virtualMachines",
-            "apiVersion": "2019-03-01",
+            "apiVersion": "2019-07-01",
             "name": "[parameters('virtualMachineName')]",
             "location": "[parameters('location')]",
             "dependsOn": [
-                "[parameters('networkInterfaceName')]",
-                "[parameters('availabilitySetName')]",
-                "[parameters('loadBalancerName')]"
+                "[variables('networkInterfaceName')]"
             ],
             "properties": {
                 "licenseType": "Windows_Server",
                 "hardwareProfile": {
                     "vmSize": "[parameters('vmSize')]"
-                },
-                "availabilitySet": {
-                    "id": "[resourceId('Microsoft.Compute/availabilitySets', parameters('availabilitySetName'))]"
                 },
                 "osProfile": {
                     "computerName": "[parameters('virtualMachineName')]",
@@ -361,7 +252,7 @@
                             "name": "[concat(parameters('virtualMachineName'), '_DataDisk2')]",
                             "caching": "ReadWrite",
                             "createOption": "Empty",
-                            "diskSizeGB": "[parameters('azsHCIDataDiskSize')]",
+                            "diskSizeGB": "[parameters('vmStoreDiskSize')]",
                             "managedDisk": {
                                 "storageAccountType": "Premium_LRS"
                             },
@@ -372,7 +263,7 @@
                 "networkProfile": {
                     "networkInterfaces": [
                         {
-                            "id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaceName'))]"
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaceName'))]"
                         }
                     ]
                 }
@@ -380,7 +271,7 @@
             "resources": [
                 {
                     "type": "extensions",
-                    "apiVersion": "2019-03-01",
+                    "apiVersion": "2019-07-01",
                     "name": "AzureStackHCIHost",
                     "location": "[parameters('location')]",
                     "dependsOn": [
@@ -424,18 +315,18 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[uri(parameters('_artifactsLocation'), concat('nestedtemplates/vnet-with-dns-server.json', parameters('_artifactsLocationSasToken')))]",
+                    "uri": "[uri(variables('_artifactsLocation'), concat('nestedtemplates/vnet-with-dns-server.json'))]",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
                     "virtualNetworkName": {
-                        "value": "[parameters('virtualNetworkName')]"
+                        "value": "[variables('virtualNetworkName')]"
                     },
                     "virtualNetworkAddressRange": {
                         "value": "[parameters('virtualNetworkAddressRange')]"
                     },
                     "subnetName": {
-                        "value": "[parameters('subnetName')]"
+                        "value": "[variables('subnetName')]"
                     },
                     "subnetRange": {
                         "value": "[parameters('subnetRange')]"
