@@ -12,7 +12,7 @@
             "value": "msftfundc"
         },
         "vmSize": {
-            "value": "Standard_E4s_v4"
+            "value": "Standard_E8s_v4"
         },
         "location": {
             "value": "germanywestcentral"
