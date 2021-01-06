@@ -1,0 +1,37 @@
+{
+    "version": 1,
+    "workspace": {
+        "name": "perfmon-wac-key",
+        "created": "2021-01-05T23:52:54.094Z",
+        "modified": "2021-01-05T23:59:49.138Z",
+        "timeRange": "FifteenMinutes",
+        "isCluster": false
+    },
+    "counters": [
+        {
+            "object": "Processor",
+            "instances": [
+                {
+                    "instanceName": "_Total"
+                }
+            ],
+            "counters": [
+                "% Processor Time"
+            ],
+            "type": "Line"
+        },
+        {
+            "object": "Network Interface",
+            "instances": [
+                {
+                    "instanceName": "Microsoft Hyper-V Network Adapter"
+                }
+            ],
+            "counters": [
+                "Bytes Sent/sec",
+                "Bytes Received/sec"
+            ],
+            "type": "Line"
+        }
+    ]
+}
