@@ -230,7 +230,7 @@
                         "version": "latest"
                     },
                     "osDisk": {
-                        "name": "[concat(parameters('virtualMachineName'),'_OSDisk')]",
+                        "name": "[concat(parameters('virtualMachineName'),'-OSDisk')]",
                         "caching": "ReadOnly",
                         "createOption": "FromImage",
                         "managedDisk": {
@@ -239,7 +239,7 @@
                     },
                     "dataDisks": [
                         {
-                            "name": "[concat(parameters('virtualMachineName'), '_DataDisk1')]",
+                            "name": "[concat(parameters('virtualMachineName'), '-DataDisk1')]",
                             "caching": "ReadWrite",
                             "createOption": "Empty",
                             "diskSizeGB": 20,
@@ -249,7 +249,7 @@
                             "lun": 0
                         },
                                                 {
-                            "name": "[concat(parameters('virtualMachineName'), '_DataDisk2')]",
+                            "name": "[concat(parameters('virtualMachineName'), '-DataDisk2')]",
                             "caching": "ReadWrite",
                             "createOption": "Empty",
                             "diskSizeGB": "[parameters('vmStoreDiskSize')]",
