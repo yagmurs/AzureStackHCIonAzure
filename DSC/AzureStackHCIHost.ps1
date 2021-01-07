@@ -59,7 +59,7 @@
     
     Import-DscResource -ModuleName 'xActiveDirectory'
     Import-DscResource -ModuleName 'xStorage'
-    Import-DscResource -ModuleName 'xNetworking'
+    Import-DscResource -ModuleName 'NetworkingDSC'
     Import-DscResource -ModuleName 'PSDesiredStateConfiguration'
     Import-DscResource -ModuleName 'ComputerManagementDsc'
     Import-DscResource -ModuleName 'xHyper-v'
@@ -279,7 +279,7 @@
             DependsOn = "[WindowsFeature]DNS"
 	    }
 
-        xDnsServerAddress "DnsServerAddress for $InterfaceAlias"
+        DnsServerAddress "DnsServerAddress for $InterfaceAlias"
         { 
             Address        = '127.0.0.1' 
             InterfaceAlias = $InterfaceAlias
@@ -374,7 +374,7 @@
             DependsOn = "[WindowsFeature]Hyper-V"
         }
 
-        xIPAddress "New IP for vEthernet $vSwitchNameMgmt"
+        IPAddress "New IP for vEthernet $vSwitchNameMgmt"
         {
             InterfaceAlias = "vEthernet `($vSwitchNameMgmt`)"
             AddressFamily = 'IPv4'
@@ -382,15 +382,30 @@
             DependsOn = "[xVMSwitch]$vSwitchNameMgmt"
         }
 
-        xDnsServerAddress "DnsServerAddress for vEthernet $vSwitchNameMgmt" 
+        NetIPInterface "Enable IP forwarding on vEthernet $vSwitchNameMgmt"
+        {   
+            AddressFamily  = 'IPv4'
+            InterfaceAlias = "vEthernet `($vSwitchNameMgmt`)"
+            Forwarding     = 'Enabled'
+            DependsOn      = "[IPAddress]New IP for vEthernet $vSwitchNameMgmt"
+        }
+
+        NetAdapterRdma "Enable RDMA on vEthernet $vSwitchNameMgmt"
+        {
+            Name = "vEthernet `($vSwitchNameMgmt`)"
+            Enabled = $true
+            DependsOn = "[NetIPInterface]Enable IP forwarding on vEthernet $vSwitchNameMgmt"
+        }
+
+        DnsServerAddress "DnsServerAddress for vEthernet $vSwitchNameMgmt" 
         { 
             Address        = '127.0.0.1' 
             InterfaceAlias = "vEthernet `($vSwitchNameMgmt`)"
             AddressFamily  = 'IPv4'
-	        DependsOn = "[xIPAddress]New IP for vEthernet $vSwitchNameMgmt"
+	        DependsOn = "[IPAddress]New IP for vEthernet $vSwitchNameMgmt"
         }
 
-        xIPAddress "New IP for vEthernet $vSwitchNameConverged"
+        IPAddress "New IP for vEthernet $vSwitchNameConverged"
         {
             InterfaceAlias = "vEthernet `($vSwitchNameConverged`)"
             AddressFamily = 'IPv4'
@@ -398,12 +413,27 @@
             DependsOn = "[xVMSwitch]$vSwitchNameConverged"
         }
 
-        xDnsServerAddress "DnsServerAddress for vEthernet $vSwitchNameConverged" 
+        NetIPInterface "Enable IP forwarding on vEthernet $vSwitchNameConverged"
+        {   
+            AddressFamily  = 'IPv4'
+            InterfaceAlias = "vEthernet `($vSwitchNameConverged`)"
+            Forwarding     = 'Enabled'
+            DependsOn      = "[IPAddress]New IP for vEthernet $vSwitchNameConverged"
+        }
+
+        NetAdapterRdma "Enable RDMA on vEthernet $vSwitchNameConverged"
+        {
+            Name = "vEthernet `($vSwitchNameConverged`)"
+            Enabled = $true
+            DependsOn = "[NetIPInterface]Enable IP forwarding on vEthernet $vSwitchNameConverged"
+        }
+
+        DnsServerAddress "DnsServerAddress for vEthernet $vSwitchNameConverged" 
         { 
             Address        = '127.0.0.1' 
             InterfaceAlias = "vEthernet `($vSwitchNameConverged`)"
             AddressFamily  = 'IPv4'
-	        DependsOn = "[xIPAddress]New IP for vEthernet $vSwitchNameConverged"
+	        DependsOn = "[IPAddress]New IP for vEthernet $vSwitchNameConverged"
         }
 
         xDhcpServerAuthorization "Authorize DHCP"
@@ -425,7 +455,7 @@
             LeaseDuration = '02.00:00:00' 
             State = 'Active' 
             AddressFamily = 'IPv4'
-            DependsOn = @("[WindowsFeature]Install DHCPServer", "[xIPAddress]New IP for vEthernet $vSwitchNameMgmt")
+            DependsOn = @("[WindowsFeature]Install DHCPServer", "[IPAddress]New IP for vEthernet $vSwitchNameMgmt")
         }
 
         xDhcpServerScope "Scope 192.168.100.0" 
@@ -439,7 +469,7 @@
             LeaseDuration = '02.00:00:00' 
             State = 'Active' 
             AddressFamily = 'IPv4'
-            DependsOn = @("[WindowsFeature]Install DHCPServer", "[xIPAddress]New IP for vEthernet $vSwitchNameConverged")
+            DependsOn = @("[WindowsFeature]Install DHCPServer", "[IPAddress]New IP for vEthernet $vSwitchNameConverged")
         }
 
         xDhcpServerOption "Option 192.168.0.0" 
@@ -450,7 +480,7 @@
             DnsServerIPAddress = '192.168.0.1' 
             AddressFamily = 'IPv4' 
             Router = '192.168.0.1'
-            DependsOn = @("[WindowsFeature]Install DHCPServer", "[xIPAddress]New IP for vEthernet $vSwitchNameMgmt")
+            DependsOn = @("[WindowsFeature]Install DHCPServer", "[IPAddress]New IP for vEthernet $vSwitchNameMgmt")
         }
 
         xDhcpServerOption "Option 192.168.100.0" 
@@ -461,7 +491,7 @@
             DnsServerIPAddress = '192.168.100.1' 
             AddressFamily = 'IPv4' 
             Router = '192.168.100.1'
-            DependsOn = @("[WindowsFeature]Install DHCPServer", "[xIPAddress]New IP for vEthernet $vSwitchNameConverged")
+            DependsOn = @("[WindowsFeature]Install DHCPServer", "[IPAddress]New IP for vEthernet $vSwitchNameConverged")
         }
 
         script "New Nat rule for Management Network"
@@ -482,7 +512,7 @@
                 $state = [scriptblock]::Create($GetScript).Invoke()
                 return $state.Result
             }
-            DependsOn = "[xIPAddress]New IP for vEthernet $vSwitchNameMgmt"
+            DependsOn = "[IPAddress]New IP for vEthernet $vSwitchNameMgmt"
         }
 
         script "New Nat rule for Nested Network"
@@ -503,7 +533,7 @@
                 $state = [scriptblock]::Create($GetScript).Invoke()
                 return $state.Result
             }
-            DependsOn = "[xIPAddress]New IP for vEthernet $vSwitchNameConverged"
+            DependsOn = "[IPAddress]New IP for vEthernet $vSwitchNameConverged"
         }
 
         script "prepareVHDX"
@@ -551,7 +581,6 @@
         {
             $suffix = '{0:D2}' -f $i
             $vmname = $($HCIvmPrefix + $suffix)
-            $ipAddressManagement = $("192.168.0.1" + $suffix)
             $ipAddressNic1 = $("192.168.254.1" + $suffix)
             $ipAddressNic2 = $("192.168.255.1" + $suffix)
             $memory = $azsHCIHostMemory * 1gb
@@ -820,9 +849,9 @@
             VhdPath         = "$targetVMPath\$wacVMName\$wacVMName-OSDisk.vhdx"
             Path            = $targetVMPath
             Generation      = 2
-            StartupMemory   = 8GB
-            MinimumMemory   = 8GB
-            MaximumMemory   = 16GB
+            StartupMemory   = 2GB
+            MinimumMemory   = 2GB
+            MaximumMemory   = 8GB
             ProcessorCount  = 2
             DependsOn       = "[xVhd]NewOSDisk-$wacVMName"
         }
