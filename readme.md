@@ -162,17 +162,3 @@ Feel free to file new feature requests as an issue on GitHub, just like a bug.
  > Yagmur Sahin
  >
  > Twitter: [@yagmurs](https://twitter.com/yagmurs)
-
-test include
-
-#include "test.md"
-#include "test.ps1"
-
-```powershell
-
-#include "test.ps1"
-#include "test.md"
-
-```
-
-
