@@ -43,11 +43,11 @@ Before connecting to Windows Admin Center, run the following PowerShell code on 
 Note: The following code will trigger Chromium based Edge and connect to WAC then start running updater.
 
 ```powershell
-#Trigger DSC configuration to re-run on Windows Admin Center
+
+#Run from Azure VM (DC)
+#Triggers DSC configuration on Windows Admin Center
 Start-DscConfiguration -UseExisting -Wait -Verbose -ComputerName Wac
 
-#Invoke Windows Admin Center portal
-& "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" https://wac
 ```
 
 Highly recommended to run following Powershell code to overcome possible kerberos related configuration issues. Following code creates new OU, pre-stage computer accounts and delegate all computers in the OU to Windows Admin Center computer and also allow set Full control access to Cluster CNO on the new OU.
@@ -59,15 +59,15 @@ $wac = "wac"
 $AzureStackHCIHosts = @("hpv01", "hpv02")
 $AzureStackHCIClusterName = "hci01"
 $servers = $AzureStackHCIHosts + $AzureStackHCIClusterName
-$ouName = "Cluster0"
+$ouName = "Cluster01"
 
 #New organizational Unit for cluster
 $dn = New-ADOrganizationalUnit -Name $ouName -PassThru
 
-#New Wac Computer Object in default OU/container
+#Get Wac Computer Object
 $wacObject = Get-AdComputer -Identity $wac
 
-#New Azure Stack HCI hosts and Cluster CNO
+#Creates Azure Stack HCI hosts and Cluster CNO
 $servers | ForEach-Object {$serversObject = New-ADComputer -Name $_ -Path $dn -PrincipalsAllowedToDelegateToAccount $wacObject -Enabled $false}
 
 #read OU DACL
