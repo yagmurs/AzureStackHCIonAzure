@@ -155,22 +155,6 @@
             ValueType = 'Dword'
         }
 
-        cShortcut "Wac Shortcut"
-        {
-            Path      = 'C:\Users\Public\Desktop\Windows Admin Center.lnk'
-            Target    = 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
-            Arguments = 'https://wac'
-            Icon      = 'shell32.dll,34'
-        }
-
-        cShortcut "Document Shortcut"
-        {
-            Path      = 'C:\Users\Public\Desktop\Poc Guide.lnk'
-            Target    = 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
-            Arguments = 'https://github.com/yagmurs/AzureStackHCIonAzure/blob/master/readme.md'
-            Icon      = 'shell32.dll,74'
-        }
-
         ScheduledTask "Disable Server Manager at Startup"
         {
             TaskName = 'ServerManager'
@@ -960,6 +944,22 @@
             Ensure      = 'Present'
             AutoUpgrade = $true
             DependsOn   = '[cChocoInstaller]installChoco'
+        }
+
+        cShortcut "Wac Shortcut"
+        {
+            Path      = 'C:\Users\Public\Desktop\Windows Admin Center.lnk'
+            Target    = 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
+            Arguments = 'https://wac'
+            Icon      = 'shell32.dll,34'
+        }
+
+        cShortcut "Document Shortcut"
+        {
+            Path      = 'C:\Users\Public\Desktop\Poc Guide.lnk'
+            Target    = 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
+            Arguments = 'https://github.com/yagmurs/AzureStackHCIonAzure/blob/master/readme.md'
+            Icon      = 'shell32.dll,74'
         }
     }
 }
