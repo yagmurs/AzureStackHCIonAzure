@@ -68,7 +68,7 @@ $dn = New-ADOrganizationalUnit -Name $ouName -PassThru
 $wacObject = Get-AdComputer -Identity $wac
 
 #New Azure Stack HCI hosts and Cluster CNO
-$servers | ForEach-Object {$serversObject = New-ADComputer -Name $_ -Path $dn -PrincipalsAllowedToDelegateToAccount $wacObject}
+$servers | ForEach-Object {$serversObject = New-ADComputer -Name $_ -Path $dn -PrincipalsAllowedToDelegateToAccount $wacObject -Enabled $false}
 
 #read OU DACL
 $acl = Get-Acl -Path "AD:\$dn"
