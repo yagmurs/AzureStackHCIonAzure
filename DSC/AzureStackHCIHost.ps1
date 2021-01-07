@@ -44,7 +44,7 @@
 
         [string]$natPrefix = "AzSHCI",
 
-        [string]$vSwitchNameMgmt = "default",
+        [string]$vSwitchNameMgmt = "Management",
 
         [string]$vSwitchNameConverged = "ConvergedSW",
 
@@ -565,8 +565,10 @@
         {
             $suffix = '{0:D2}' -f $i
             $vmname = $($HCIvmPrefix + $suffix)
-            $ipAddressNic1 = $("192.168.254.1" + $suffix)
-            $ipAddressNic2 = $("192.168.255.1" + $suffix)
+            $ipAddressNic1 = $("192.168.251.1" + $suffix)
+            $ipAddressNic2 = $("192.168.252.1" + $suffix)
+            $ipAddressNic3 = $("192.168.253.1" + $suffix)
+            $ipAddressNic4 = $("192.168.254.1" + $suffix)
             $memory = $azsHCIHostMemory * 1gb
 
             file "VM-Folder-$vmname"
@@ -606,17 +608,7 @@
                 ExposeVirtualizationExtensions = $true
                 DependsOn = "[xVMHyperV]VM-$vmname"
             }
-<#
-            xVMNetworkAdapter "remove default Network Adapter on VM-$vmname"
-            {
-                Ensure = 'Absent'
-                Id = "Network Adapter"
-                Name = "Network Adapter"
-                SwitchName = $vSwitchNameMgmt
-                VMName = $vmName
-                DependsOn = "[xVMHyperV]VM-$vmname"
-            }
-#>
+
             script "remove default Network Adapter on VM-$vmname"
             {
                 GetScript = {
@@ -688,6 +680,34 @@
                 DependsOn = "[xVMHyperV]VM-$vmname"
             }
 
+            xVMNetworkAdapter "New Network Adapter Converged $('VM-' + $vmname + '-Nic3')"
+            {
+                Id = "$vmname-Converged-Nic3"
+                Name = "$vmname-Converged-Nic3"
+                SwitchName = $vSwitchNameConverged
+                VMName = $vmname
+                NetworkSetting = xNetworkSettings {
+                    IpAddress = $ipAddressNic3
+                    Subnet = "255.255.255.0"
+                }
+                Ensure = 'Present'
+                DependsOn = "[xVMHyperV]VM-$vmname"
+            }
+
+            xVMNetworkAdapter "New Network Adapter Converged $('VM-' + $vmname + '-Nic4')"
+            {
+                Id = "$vmname-Converged-Nic4"
+                Name = "$vmname-Converged-Nic4"
+                SwitchName = $vSwitchNameConverged
+                VMName = $vmname
+                NetworkSetting = xNetworkSettings {
+                    IpAddress = $ipAddressNic4
+                    Subnet = "255.255.255.0"
+                }
+                Ensure = 'Present'
+                DependsOn = "[xVMHyperV]VM-$vmname"
+            }
+
             script "Enable $('VM-' + $vmname + '-Nic1') Mac address spoofing"
             {
                 GetScript = {
@@ -738,6 +758,58 @@
                     return $state.Result
                 }
                 DependsOn = "[xVMNetworkAdapter]New Network Adapter Converged $('VM-' + $vmname + '-Nic2')"
+            }
+
+            script "Enable $('VM-' + $vmname + '-Nic3') Mac address spoofing"
+            {
+                GetScript = {
+                    $VMNetworkAdapter = Get-VMNetworkAdapter -VMName $using:vmname -Name $using:vmname-Converged-Nic3
+                    $result = if ($VMNetworkAdapter.MacAddressSpoofing -eq 'on') {$true} else {$false}
+                    return @{
+                        MacAddressSpoofing = $VMNetworkAdapter.MacAddressSpoofing
+                        VMName = $VMNetworkAdapter.VMName
+                        Name = $VMNetworkAdapter.Name
+                        Result = $result
+                    }
+                }
+    
+                SetScript = {
+                    $state = [scriptblock]::Create($GetScript).Invoke()
+                    Set-VMNetworkAdapter -VMName $state.VMName -Name $state.Name -MacAddressSpoofing on                  
+                }
+    
+                TestScript = {
+                    # Create and invoke a scriptblock using the $GetScript automatic variable, which contains a string representation of the GetScript.
+                    $state = [scriptblock]::Create($GetScript).Invoke()
+                    return $state.Result
+                }
+                DependsOn = "[xVMNetworkAdapter]New Network Adapter Converged $('VM-' + $vmname + '-Nic3')"
+            }
+
+            script "Enable $('VM-' + $vmname + '-Nic4') Mac address spoofing"
+            {
+                GetScript = {
+                    $VMNetworkAdapter = Get-VMNetworkAdapter -VMName $using:vmname -Name $using:vmname-Converged-Nic4
+                    $result = if ($VMNetworkAdapter.MacAddressSpoofing -eq 'on') {$true} else {$false}
+                    return @{
+                        MacAddressSpoofing = $VMNetworkAdapter.MacAddressSpoofing
+                        VMName = $VMNetworkAdapter.VMName
+                        Name = $VMNetworkAdapter.Name
+                        Result = $result
+                    }
+                }
+    
+                SetScript = {
+                    $state = [scriptblock]::Create($GetScript).Invoke()
+                    Set-VMNetworkAdapter -VMName $state.VMName -Name $state.Name -MacAddressSpoofing on                  
+                }
+    
+                TestScript = {
+                    # Create and invoke a scriptblock using the $GetScript automatic variable, which contains a string representation of the GetScript.
+                    $state = [scriptblock]::Create($GetScript).Invoke()
+                    return $state.Result
+                }
+                DependsOn = "[xVMNetworkAdapter]New Network Adapter Converged $('VM-' + $vmname + '-Nic4')"
             }
 
             for ($j = 1; $j -lt $azsHostDataDiskCount + 1 ; $j++)
