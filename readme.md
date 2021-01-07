@@ -100,9 +100,11 @@ Once you have deployed your Azure Stack HCI cluster, You can use 192.168.100.0/2
 
 ### How to deploy Azure Stack HCI using Windows Admin Center
 
-<img src="./.images/azshciusingwac.gif" width="720" height="576" />
+![alt](./.images/azshciusingwac.gif)
 
-<!--- <img src="./.images/azshciusingwac.gif" data-canonical-src="./.images/azshciusingwac.gif" width="1280" height="720" /> --->
+<!--- <img src="./.images/azshciusingwac.gif" width="720" height="576" />
+
+<img src="./.images/azshciusingwac.gif" data-canonical-src="./.images/azshciusingwac.gif" width="1280" height="720" /> --->
 
 ### VMs in the nested environment messed up / willing to Reset?
 
