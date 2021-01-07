@@ -14,8 +14,6 @@ Creates new Azure VM and install prerequisites to run Proof of Concept for Azure
 
 This ARM template and DSC extension prepares Azure VM as Hyper-v host (also Domain Controller) to run 2 or more Nested Azure Stack HCI host with nested virtualization enabled and Deploy 1 nested VM for Windows Admin Center named WAC. DSC extension download all the bits required.
 
-
-
 ## Step by Step Guidance
 
 ### High level deployment process and features
@@ -90,7 +88,7 @@ Open Edge browser installed on Azure Vm and connect to https://wac and invoke Az
 
 Once you have deployed your Azure Stack HCI cluster, You can use 192.168.100.0/24 to let them use DHCP server configured on Azure VM. So all VMs would be able to connect to Internet.
 
-**Do not use 192.168.0.0/24 , 192.168.100.0/24 , 192.168.254.0/24 , 192.168.255.0/24 networks for Vnet since those network are getting utilized in the Nested environment.**
+**Do not use 192.168.0.0/24 , 192.168.100.0/24 , 192.168.251.0/24, 192.168.252.0/24, 192.168.253.0/24 , 192.168.254.0/24 networks as address space for Vnet since those network are getting utilized in the Nested environment.**
 
 ### Deploying ARM template using Powershell
 
@@ -100,7 +98,7 @@ Once you have deployed your Azure Stack HCI cluster, You can use 192.168.100.0/2
 
 ### How to deploy Azure Stack HCI using Windows Admin Center
 
-![alt](./.images/azshciusingwac.gif)
+![alt](https://github.com/yagmurs/AzureStackHCIonAzure/raw/master/.images/azshciusingwac.gif)
 
 <!--- <img src="./.images/azshciusingwac.gif" width="720" height="576" />
 
