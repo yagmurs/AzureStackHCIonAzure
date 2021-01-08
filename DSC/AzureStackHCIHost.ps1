@@ -567,7 +567,6 @@
             $suffix = '{0:D2}' -f $i
             $vmname = $($HCIvmPrefix + $suffix)
             $memory = $azsHCIHostMemory * 1gb
-            $mgmtNicName = "$vmname-Management$k"
 
             file "VM-Folder-$vmname"
             {
@@ -634,6 +633,7 @@
 
             for ($k = 1; $k -le 2; $k++)
             {
+                $mgmtNicName = "$vmname-Management$k"
                 xVMNetworkAdapter "New Network Adapter $mgmtNicName $vmname DHCP"
                 {
                     Id = $mgmtNicName
