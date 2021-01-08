@@ -934,7 +934,7 @@
         {
             Path      = 'C:\Users\Public\Desktop\Poc Guide.lnk'
             Target    = 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
-            Arguments = 'https://github.com/yagmurs/AzureStackHCIonAzure/blob/master/readme.md'
+            Arguments = 'https://yagmurs.github.io/AzureStackHCIonAzure'
             Icon      = 'shell32.dll,74'
         }
     }
