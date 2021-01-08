@@ -567,6 +567,7 @@
             $suffix = '{0:D2}' -f $i
             $vmname = $($HCIvmPrefix + $suffix)
             $memory = $azsHCIHostMemory * 1gb
+            $mgmtNicName = "$vmname-Management$k"
 
             file "VM-Folder-$vmname"
             {
@@ -633,14 +634,25 @@
 
             for ($k = 1; $k -le 2; $k++)
             {
-                xVMNetworkAdapter "New Network Adapter Management$k VM-$vmname"
+                xVMNetworkAdapter "New Network Adapter $mgmtNicName $vmname DHCP"
                 {
-                    Id = "$vmname-Management$k"
-                    Name = "$vmname-Management$k"
+                    Id = $mgmtNicName
+                    Name = $mgmtNicName
                     SwitchName = $vSwitchNameMgmt
                     VMName = $vmname
                     Ensure = 'Present'
                     DependsOn = "[xVMHyperV]VM-$vmname"
+                }
+
+                cVMNetworkAdapterSettings "Enable $vmname $nicName Mac address spoofing and Teaming"
+                {
+                    Id = $mgmtNicName
+                    Name = $mgmtNicName
+                    SwitchName = $vSwitchNameMgmt
+                    VMName = $vmname
+                    AllowTeaming = 'on'
+                    MacAddressSpoofing = 'on'
+                    DependsOn = "[xVMNetworkAdapter]New Network Adapter $mgmtNicName $vmname DHCP"
                 }
             }
 
