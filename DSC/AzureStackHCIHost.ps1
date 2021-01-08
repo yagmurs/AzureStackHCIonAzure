@@ -246,6 +246,12 @@
             Name = "DNS"		
         }
 
+        WindowsFeature "Enable Deduplication" 
+        { 
+            Ensure = "Present" 
+            Name = "FS-Data-Deduplication"		
+        }
+
         Script EnableDNSDiags
 	    {
       	    SetScript = { 
