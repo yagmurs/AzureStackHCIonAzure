@@ -758,12 +758,13 @@
                         
                         New-Item -Path $("$driveLetter" + ":" + "\Temp") -ItemType Directory -Force -ErrorAction Stop
                         
-                        New-BasicUnattendXML -ComputerName $name -LocalAdministratorPassword $using:Admincreds.Password -OutputPath "$using:targetVMPath\$name" -Force -ErrorAction Stop
+                        #New-BasicUnattendXML -ComputerName $name -LocalAdministratorPassword $using:Admincreds.Password -OutputPath "$using:targetVMPath\$name" -Force -ErrorAction Stop
+
+                        New-BasicUnattendXML -ComputerName $name -LocalAdministratorPassword $($using:Admincreds).Password -Domain $using:DomainName -Username $using:Admincreds.Username `
+                        -Password $($using:Admincreds).Password -JoinDomain $using:DomainName -OutputPath "$using:targetVMPath\$name" -Force
 
                         Copy-Item -Path "$using:targetVMPath\$name\Unattend.xml" -Destination $("$driveLetter" + ":" + "\Windows\system32\SysPrep") -Force -ErrorAction Stop
 
-                        #New-UnattendXml -Path $("$driveLetter" + ":" + "\Windows\system32\SysPrep\Unattend.xml") -ComputerName $name -enableAdministrator -AdminCredential $using:Admincreds -UserAccount $using:Admincreds
-                        #New-UnattendXml -Path "$using:targetVMPath\$name\Unattend.xml" -ComputerName $name -enableAdministrator -AdminCredential $using:Admincreds -UserAccount $using:Admincreds
                         Start-Sleep -Seconds 2
                     }
                     finally 
@@ -866,10 +867,6 @@
                     -IpCidr "192.168.0.100/24" -DnsServer '192.168.0.1' -NicNameForIPandDNSAssignments 'Ethernet' -PowerShellScriptFullPath 'c:\temp\Install-WacUsingChoco.ps1' -ErrorAction Stop
                     
                     Copy-Item -Path "$using:targetVMPath\$name\Unattend.xml" -Destination $("$driveLetter" + ":" + "\Windows\system32\SysPrep") -Force -ErrorAction Stop
-                    
-                    #New-UnattendXml -Path $("$driveLetter" + ":" + "\Windows\system32\SysPrep\Unattend.xml") -ComputerName $name -enableAdministrator -AdminCredential $using:Admincreds -UserAccount $using:Admincreds
-                    #New-UnattendXml -Path "$using:targetVMPath\$name\Unattend.xml" -ComputerName $name -enableAdministrator -AdminCredential $using:Admincreds -UserAccount $using:Admincreds
-                    #Copy-Item -Path "$using:sourcePath\pending.mof" -Destination $("$driveLetter" + ":" + "\Windows\system32\Configuration\pending.mof") -Force
                     
                     Copy-Item -Path "C:\Program Files\WindowsPowerShell\Modules\cChoco" -Destination $("$driveLetter" + ":" + "\Program Files\WindowsPowerShell\Modules") -Recurse -Force -ErrorAction Stop
                     Copy-Item -Path "C:\Program Files\WindowsPowerShell\Modules\ComputerManagementDsc" -Destination $("$driveLetter" + ":" + "\Program Files\WindowsPowerShell\Modules") -Recurse -Force -ErrorAction Stop
