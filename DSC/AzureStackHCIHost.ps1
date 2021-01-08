@@ -644,7 +644,7 @@
                     DependsOn = "[xVMHyperV]VM-$vmname"
                 }
 
-                cVMNetworkAdapterSettings "Enable $vmname $nicName Mac address spoofing and Teaming"
+                cVMNetworkAdapterSettings "Enable $vmname $mgmtNicName Mac address spoofing and Teaming"
                 {
                     Id = $mgmtNicName
                     Name = $mgmtNicName
