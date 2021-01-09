@@ -281,8 +281,7 @@
     },
     "variables": {
         "dscUri": "[concat('https://github.com/yagmurs/AzureStackHCIonAzure/raw/', parameters('branch'), '/DSC/AzureStackHCIHost.zip')]",
-        "_artifactsLocation": "https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/active-directory-new-domain/",
-        "_artifactsLocation2": "https://raw.githubusercontent.com/yagmurs/AzureStackHCIonAzure/test/",
+        "_artifactsLocation": "https://raw.githubusercontent.com/yagmurs/AzureStackHCIonAzure/test/",
         "networkSecurityGroupName": "[concat(parameters('virtualMachineName'),'-nsg')]",
         "publicIpAddressName": "[concat(parameters('virtualMachineName'),'-pip')]",
         "virtualNetworkName": "[concat(parameters('virtualMachineName'),'-vnet')]",
@@ -494,7 +493,7 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[uri(variables('_artifactsLocation2'), 'linkedtemplates/autoshutdown.json')]",
+                    "uri": "[uri(variables('_artifactsLocation'), 'linkedtemplates/autoshutdown.json')]",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
