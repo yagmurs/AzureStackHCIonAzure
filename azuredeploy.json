@@ -493,7 +493,7 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[uri(variables('_artifactsLocation'), 'linkedtemplates/autoshutdown.json')]",
+                    "uri": "[uri(variables('_artifactsLocation'), 'nestedtemplates/autoshutdown.json')]",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
