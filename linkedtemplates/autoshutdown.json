@@ -29,9 +29,9 @@
             "type": "string",
             "defaultValue": "0200",
             "minLength": 4,
-            "maxLength": 5,
+            "maxLength": 4,
             "metadata": {
-                "description": "The time at which VMs will be automatically shutdown (24h HHmm format). Set value to '9999' to NOT configure the auto shutdown."
+                "description": "The time at which VMs will be automatically shutdown (24h HHmm format)."
             }
         },
         "autoShutdownTimeZone": {
