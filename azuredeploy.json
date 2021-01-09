@@ -281,7 +281,7 @@
     },
     "variables": {
         "dscUri": "[concat('https://github.com/yagmurs/AzureStackHCIonAzure/raw/', parameters('branch'), '/DSC/AzureStackHCIHost.zip')]",
-        "_artifactsLocation": "[concat('https://raw.githubusercontent.com/yagmurs/AzureStackHCIonAzure/', parameters('branch'))]"
+        "_artifactsLocation": "[concat('https://raw.githubusercontent.com/yagmurs/AzureStackHCIonAzure/', parameters('branch'))]",
         "networkSecurityGroupName": "[concat(parameters('virtualMachineName'),'-nsg')]",
         "publicIpAddressName": "[concat(parameters('virtualMachineName'),'-pip')]",
         "virtualNetworkName": "[concat(parameters('virtualMachineName'),'-vnet')]",
