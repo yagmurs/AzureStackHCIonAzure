@@ -22,7 +22,7 @@
     "variables": {},
     "resources": [
         {
-            "type": "Microsoft.DevTestLab/labs/schedules",
+            "type": "Microsoft.DevTestLab/schedules",
             "apiVersion": "2018-09-15",
             "location": "[parameters('location')]",
             "name": "[concat('shutdown-vm-', parameters('virtualMachineName'))]",
