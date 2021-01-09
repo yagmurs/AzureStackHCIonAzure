@@ -281,7 +281,7 @@
     },
     "variables": {
         "dscUri": "[concat('https://github.com/yagmurs/AzureStackHCIonAzure/raw/', parameters('branch'), '/DSC/AzureStackHCIHost.zip')]",
-        "_artifactsLocation": "[concat('https://raw.githubusercontent.com/yagmurs/AzureStackHCIonAzure/', parameters('branch'))]",
+        "_artifactsLocation": "[concat('https://raw.githubusercontent.com/', 'yagmurs/AzureStackHCIonAzure/', parameters('branch'), '/')]",
         "networkSecurityGroupName": "[concat(parameters('virtualMachineName'),'-nsg')]",
         "publicIpAddressName": "[concat(parameters('virtualMachineName'),'-pip')]",
         "virtualNetworkName": "[concat(parameters('virtualMachineName'),'-vnet')]",
@@ -308,7 +308,7 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[uri(variables('_artifactsLocation'), concat('/nestedtemplates/vnet.json'))]",
+                    "uri": "[uri(variables('_artifactsLocation'), concat('nestedtemplates/vnet.json'))]",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
@@ -493,7 +493,7 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[uri(variables('_artifactsLocation'), '/nestedtemplates/autoshutdown.json')]",
+                    "uri": "[uri(variables('_artifactsLocation'), 'nestedtemplates/autoshutdown.json')]",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
@@ -528,7 +528,7 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[uri(variables('_artifactsLocation'), concat('/nestedtemplates/vnet-with-dns-server.json'))]",
+                    "uri": "[uri(variables('_artifactsLocation'), concat('nestedtemplates/vnet-with-dns-server.json'))]",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
