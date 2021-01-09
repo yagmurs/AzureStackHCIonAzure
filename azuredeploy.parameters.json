@@ -40,6 +40,18 @@
         },
         "vmStoreDiskSize": {
             "value": 512
+        },
+        "enableHybridBenefitServerLicenses": {
+            "value": "Yes"
+        },
+        "autoShutdown": {
+            "value": "Enabled"
+        },
+        "autoShutdownTime": {
+            "value": "0200"
+        },
+        "autoShutdownTimeZone": {
+            "value": "UTC"
         }
     }
 }
