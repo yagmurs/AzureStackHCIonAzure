@@ -26,9 +26,6 @@
             "apiVersion": "2018-09-15",
             "location": "[parameters('location')]",
             "name": "[concat('shutdown-vm-', parameters('virtualMachineName'))]",
-            "dependsOn": [
-                "AzureStackHCIHost"
-            ],
             "properties": {
                 "status": "[parameters('autoShutdown')]",
                 "taskType": "ComputeVmShutdownTask",
