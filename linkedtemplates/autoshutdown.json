@@ -25,7 +25,7 @@
             "type": "Microsoft.DevTestLab/schedules",
             "apiVersion": "2016-05-15",
             "location": "[parameters('location')]",
-            "name": "[concat('shutdown-vm-', parameters('virtualMachineName'))]",
+            "name": "[concat('shutdown-computevm-', parameters('virtualMachineName'))]",
             "properties": {
                 "status": "[parameters('autoShutdown')]",
                 "taskType": "ComputeVmShutdownTask",
