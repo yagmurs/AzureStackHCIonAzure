@@ -1,0 +1,44 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "type": "string"
+        },
+        "virtualMachineName": {
+            "type": "string"
+        },
+        "autoShutdown": {
+            "type": "string"
+        },
+        "autoShutdownTime": {
+            "type": "string"
+        },
+            "autoShutdownTimeZone": {
+            "type": "string"
+        }
+    },
+    "functions": [],
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.DevTestLab/labs/schedules",
+            "apiVersion": "2018-09-15",
+            "location": "[parameters('location')]",
+            "name": "[concat('shutdown-vm-', parameters('virtualMachineName'))]",
+            "dependsOn": [
+                "AzureStackHCIHost"
+            ],
+            "properties": {
+                "status": "[parameters('autoShutdown')]",
+                "taskType": "ComputeVmShutdownTask",
+                "dailyRecurrence": {
+                    "time": "[parameters('autoShutdownTime')]"
+                },
+                "timeZoneId": "[parameters('autoShutdownTimeZone')]",
+                "targetResourceId": "[resourceId('Microsoft.Compute/virtualMachines', parameters('virtualMachineName'))]"
+            }  
+        }
+    ],
+    "outputs": {}
+}
