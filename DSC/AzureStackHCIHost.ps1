@@ -69,6 +69,7 @@
     Import-DscResource -ModuleName 'cChoco'
     Import-DscResource -ModuleName 'DSCR_Shortcut'
     
+    $aszhciHostsMofUri = "https://raw.githubusercontent.com/yagmurs/AzureStackHCIonAzure/$branch/helpers/Install-AzsRolesandFeatures.ps1"
     $wacMofUri = "https://raw.githubusercontent.com/yagmurs/AzureStackHCIonAzure/$branch/helpers/Install-WacUsingChoco.ps1"
     [System.Management.Automation.PSCredential]$DomainCreds = New-Object System.Management.Automation.PSCredential ("${DomainName}\$($Admincreds.UserName)", $Admincreds.Password)
     $Interface=Get-NetAdapter | Where-Object Name -Like "Ethernet*" | Select-Object -First 1
@@ -183,7 +184,7 @@
             DependsOn = "[File]source"
         }
  #>
-        script "Download Mof for $wacVMName"
+        script "Download DSC Config for $wacVMName"
         {
             GetScript = {
                 $result = Test-Path -Path "$using:sourcePath\Install-WacUsingChoco.ps1"
@@ -192,6 +193,25 @@
 
             SetScript = {
                 Start-BitsTransfer -Source "$using:wacMofUri" -Destination "$using:sourcePath\Install-WacUsingChoco.ps1"          
+            }
+
+            TestScript = {
+                # Create and invoke a scriptblock using the $GetScript automatic variable, which contains a string representation of the GetScript.
+                $state = [scriptblock]::Create($GetScript).Invoke()
+                return $state.Result
+            }
+            DependsOn = "[File]source"
+        }
+
+        script "Download DSC Config for AzsHci Hosts"
+        {
+            GetScript = {
+                $result = Test-Path -Path "$using:sourcePath\Install-AzsRolesandFeatures.ps1"
+                return @{ 'Result' = $result }
+            }
+
+            SetScript = {
+                Start-BitsTransfer -Source "$using:aszhciHostsMofUri" -Destination "$using:sourcePath\Install-AzsRolesandFeatures.ps1"          
             }
 
             TestScript = {
@@ -764,10 +784,14 @@
                         
                         New-Item -Path $("$driveLetter" + ":" + "\Temp") -ItemType Directory -Force -ErrorAction Stop
                         
-                        #New-BasicUnattendXML -ComputerName $name -LocalAdministratorPassword $using:Admincreds.Password -OutputPath "$using:targetVMPath\$name" -Force -ErrorAction Stop
+                        Copy-Item -Path "$using:sourcePath\Install-AzsRolesandFeatures.ps1" -Destination $("$driveLetter" + ":" + "\Temp") -Force -ErrorAction Stop
 
                         New-BasicUnattendXML -ComputerName $name -LocalAdministratorPassword $($using:Admincreds).Password -Domain $using:DomainName -Username $using:Admincreds.Username `
-                        -Password $($using:Admincreds).Password -JoinDomain $using:DomainName -OutputPath "$using:targetVMPath\$name" -Force
+                            -Password $($using:Admincreds).Password -JoinDomain $using:DomainName -AutoLogonCount 1 -OutputPath "$using:targetVMPath\$name" -Force `
+                            -PowerShellScriptFullPath 'c:\temp\Install-AzsRolesandFeatures.ps1' -ErrorAction Stop
+
+                        #New-BasicUnattendXML -ComputerName $name -LocalAdministratorPassword $($using:Admincreds).Password -Domain $using:DomainName -Username $using:Admincreds.Username `
+                        #    -Password $($using:Admincreds).Password -JoinDomain $using:DomainName -OutputPath "$using:targetVMPath\$name" -Force
 
                         Copy-Item -Path "$using:targetVMPath\$name\Unattend.xml" -Destination $("$driveLetter" + ":" + "\Windows\system32\SysPrep") -Force -ErrorAction Stop
 
@@ -786,7 +810,7 @@
                     $state = [scriptblock]::Create($GetScript).Invoke()
                     return $state.Result
                 }
-                DependsOn = "[xVhd]NewOSDisk-$vmname"
+                DependsOn = "[xVhd]NewOSDisk-$vmname", "[script]Download DSC Config for AzsHci Hosts"
             }
         }
 
@@ -893,7 +917,7 @@
                 $state = [scriptblock]::Create($GetScript).Invoke()
                 return $state.Result
             }
-            DependsOn = "[xVhd]NewOSDisk-$wacVMName", "[script]Download Mof for $wacVMName"
+            DependsOn = "[xVhd]NewOSDisk-$wacVMName", "[script]Download DSC Config for $wacVMName"
         }
 
         cChocoInstaller InstallChoco
