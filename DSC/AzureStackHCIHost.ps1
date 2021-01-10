@@ -72,8 +72,10 @@
     $aszhciHostsMofUri = "https://raw.githubusercontent.com/yagmurs/AzureStackHCIonAzure/$branch/helpers/Install-AzsRolesandFeatures.ps1"
     $wacMofUri = "https://raw.githubusercontent.com/yagmurs/AzureStackHCIonAzure/$branch/helpers/Install-WacUsingChoco.ps1"
     [System.Management.Automation.PSCredential]$DomainCreds = New-Object System.Management.Automation.PSCredential ("${DomainName}\$($Admincreds.UserName)", $Admincreds.Password)
-    $Interface=Get-NetAdapter | Where-Object Name -Like "Ethernet*" | Select-Object -First 1
-    $InterfaceAlias=$($Interface.Name)
+    
+    $ipConfig = (Get-NetAdapter -Physical | Get-NetIPConfiguration | Where-Object IPv4DefaultGateway)
+    $netAdapters = Get-NetAdapter -Name ($ipConfig.InterfaceAlias) | Select-Object -First 1
+    $InterfaceAlias=$($netAdapters.Name)
 
     Node localhost
     {
