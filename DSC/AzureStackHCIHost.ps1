@@ -242,7 +242,7 @@
             }
             DependsOn = "[File]source"
         }
-
+<#
         script "Download Windows Server 2019"
         {
             GetScript = {
@@ -261,7 +261,7 @@
             }
             DependsOn = "[File]source"
         }
-
+ #>
         WindowsFeature DNS 
         { 
             Ensure = "Present" 
@@ -570,7 +570,7 @@
             }
             DependsOn = "[file]VM-Base", "[script]Download AzureStack HCI bits"
         }
-
+<#
         script "prepareVHDX ws2019"
         {
             GetScript = {
@@ -589,7 +589,7 @@
             }
             DependsOn = "[file]VM-Base", "[script]Download Windows Server 2019"
         }
-
+ #>
         for ($i = 1; $i -lt $azsHostCount + 1; $i++)
         {
             $suffix = '{0:D2}' -f $i
@@ -832,7 +832,7 @@
             Generation       = 'vhdx'
             ParentPath       = $azsHciVhdPath
             Type             = 'Differencing'
-            DependsOn = "[xVMSwitch]$vSwitchNameMgmt", "[script]prepareVHDX ws2019", "[file]VM-Folder-$wacVMName"
+            DependsOn = "[xVMSwitch]$vSwitchNameMgmt", "[script]prepareVHDX", "[file]VM-Folder-$wacVMName"
         }
 
         xVMHyperV "VM-$wacVMName"
