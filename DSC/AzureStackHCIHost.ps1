@@ -830,7 +830,7 @@
             Name             = "$wacVMName-OSDisk.vhdx"
             Path             = "$targetVMPath\$wacVMName"
             Generation       = 'vhdx'
-            ParentPath       = $ws2019VhdPath
+            ParentPath       = $azsHciVhdPath
             Type             = 'Differencing'
             DependsOn = "[xVMSwitch]$vSwitchNameMgmt", "[script]prepareVHDX ws2019", "[file]VM-Folder-$wacVMName"
         }
