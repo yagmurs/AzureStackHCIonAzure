@@ -86,7 +86,7 @@
         },
         "azsHCIHostMemory": {
             "type": "int",
-            "defaultValue": 16,
+            "defaultValue": 22,
             "metadata": {
                 "description": "Azure Stack HCI memory amount in GB"
             }
