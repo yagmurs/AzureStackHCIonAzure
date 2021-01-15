@@ -69,6 +69,7 @@
     Import-DscResource -ModuleName 'cChoco'
     Import-DscResource -ModuleName 'DSCR_Shortcut'
     
+    $branchFiles = "https://github.com/yagmurs/AzureStackHCIonAzure/archive/$branch.zip"
     $aszhciHostsMofUri = "https://raw.githubusercontent.com/yagmurs/AzureStackHCIonAzure/$branch/helpers/Install-AzsRolesandFeatures.ps1"
     $wacMofUri = "https://raw.githubusercontent.com/yagmurs/AzureStackHCIonAzure/$branch/helpers/Install-WacUsingChoco.ps1"
     [System.Management.Automation.PSCredential]$DomainCreds = New-Object System.Management.Automation.PSCredential ("${DomainName}\$($Admincreds.UserName)", $Admincreds.Password)
@@ -166,16 +167,15 @@
             TaskPath = '\Microsoft\Windows\Server Manager'
         }
 
-<#
-        script "Download Windows Admin Center"
+        script "Download branch files for $branch"
         {
             GetScript = {
-                $result = Test-Path -Path $using:wacLocalPath
+                $result = Test-Path -Path "$using:sourcePath\$branch.zip"
                 return @{ 'Result' = $result }
             }
 
             SetScript = {
-                Start-BitsTransfer -Source $using:wacUri -Destination $using:wacLocalPath           
+                Start-BitsTransfer -Source $branchFiles -Destination "$using:sourcePath\$branch.zip"          
             }
 
             TestScript = {
@@ -185,7 +185,7 @@
             }
             DependsOn = "[File]source"
         }
- #>
+
         script "Download DSC Config for $wacVMName"
         {
             GetScript = {
