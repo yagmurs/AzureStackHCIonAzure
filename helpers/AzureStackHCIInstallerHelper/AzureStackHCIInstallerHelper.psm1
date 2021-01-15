@@ -69,6 +69,25 @@ function Cleanup-VMs
     }
 }
 
+function Prepare-AdforAzsHciDeployment
+{
+    [CmdletBinding()]
+    Param
+    (
+    
+    )
+
+    Begin
+    {
+    }
+    Process
+    {
+    }
+    End
+    {
+    }
+}
+
 Function Configure-AzsHciClusterRoles
 {
     [CmdletBinding()]
@@ -275,9 +294,8 @@ Function Configure-AzsHciClusterNetwork
                         #try to suppress error message
                         New-VMSwitch -Name $using:vSwitchNameMgmt -AllowManagementOS $true -NetAdapterName $newAdapterNames -EnableEmbeddedTeaming $true
                         Rename-NetAdapter -Name "vEthernet `($using:vSwitchNameMgmt`)" -NewName $using:vSwitchNameMgmt
-
-                        
                     }
+                    $mgmtSwitchName = $vSwitchNameMgmt
                 }
                 "SingleAdapter" {
                     Write-Verbose "[Configure ManagementInterfaceConfig]: SingleAdapter - Configuring Management Interface"
@@ -292,6 +310,7 @@ Function Configure-AzsHciClusterNetwork
                         Rename-NetAdapter -Name "$($netAdapters[1].Name)" -NewName $($using:vSwitchNameMgmt + " 2") 
                         Disable-NetAdapter -Name $($using:vSwitchNameMgmt + " 2") -Confirm:$false
                     }
+                    $mgmtSwitchName = $null
                 }
             }
 
@@ -330,6 +349,7 @@ Function Configure-AzsHciClusterNetwork
                             
                         } 
                     }
+                    $computeSwitchName = $vSwitchNameConverged
                 }
                 "OneVirtualSwitchforComputeOnly" {
                     Write-Verbose "[Configure ComputeAndStorageInterfaces]: OneVirtualSwitchforComputeOnly - Configuring ComputeAndStorageInterfaces"
@@ -371,6 +391,7 @@ Function Configure-AzsHciClusterNetwork
                             
                         }
                     }
+                    $computeSwitchName = $vSwitchNameCompute
                 }
                 "TwoVirtualSwitches" {
                     Write-Verbose "[Configure ComputeAndStorageInterfaces]: TwoVirtualSwitches - Configuring ComputeAndStorageInterfaces"
@@ -429,6 +450,7 @@ Function Configure-AzsHciClusterNetwork
                             
                         }
                     }
+                    $computeSwitchName = $vSwitchNameCompute
                 }
             }
             
@@ -441,6 +463,10 @@ Function Configure-AzsHciClusterNetwork
         Set-DhcpServerv4Scope -ScopeId 192.168.100.0 -State Active
         Remove-PSSession -Session $psSession
         Remove-Variable -Name psSession
+        @{
+            ManagementSwitch = $mgmtSwitchName
+            ComputeSwitch = $computeSwitchName
+        }
     }
 }
 
@@ -529,5 +555,24 @@ function Setup-AzsHciCluster
         #clean up variables
         Remove-CimSession -CimSession $cimSession
         Remove-Variable -Name cimSession
+    }
+}
+
+function Prepare-AzsHciClusterforAksHciDeployment
+{
+    [CmdletBinding()]
+    Param
+    (
+    
+    )
+
+    Begin
+    {
+    }
+    Process
+    {
+    }
+    End
+    {
     }
 }
