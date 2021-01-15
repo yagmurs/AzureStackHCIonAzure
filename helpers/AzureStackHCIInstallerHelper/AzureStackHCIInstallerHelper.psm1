@@ -95,7 +95,7 @@ function Prepare-AdforAzsHciDeployment
         $wacObject = Get-AdComputer -Identity $wac
 
         #Creates Azure Stack HCI hosts and Cluster CNO
-        $servers | ForEach-Object {New-ADComputer -Name $_ -Path $dn -PrincipalsAllowedToDelegateToAccount $wacObject -Enabled $false}
+        $servers | ForEach-Object {Set-ADComputer -Identity $_ -PrincipalsAllowedToDelegateToAccount $wacObject}
 
         #read OU DACL
         $acl = Get-Acl -Path "AD:\$dn"
