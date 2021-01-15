@@ -18,7 +18,8 @@ function Cleanup-VMs
 
     Begin
     {
-        #variables
+        #initializing variables
+        $AzureStackHCIHosts = Get-VM hpv*
         $domainName = (Get-ADDomain).DnsRoot
         $dhcpScopeString = '192.168.0.0'
 
@@ -54,8 +55,6 @@ function Cleanup-VMs
             #remove Windows Admin Center host DNS record, DHCP lease
             Get-DnsServerResourceRecord -ZoneName $domainName -Name $wac.Name -ErrorAction SilentlyContinue | Remove-DnsServerResourceRecord -ZoneName $domainName -Force
             Get-DhcpServerv4Lease -ScopeId $dhcpScopeString -ErrorAction SilentlyContinue | Where-Object hostname -like $wac.Name | Remove-DhcpServerv4Lease
-
-            Start-DscConfiguration -UseExisting -Wait -Verbose -Force
         }
 
         if ($RedeployDeletedVMs)
@@ -255,7 +254,7 @@ Function Configure-AzsHciClusterNetwork
                     Invoke-Command -Session $psSession -ScriptBlock {
                         $ipConfig = (
                             Get-NetAdapter -Physical | Get-NetAdapterBinding | Where-Object {$_.enabled -eq $true -and $_.DisplayName -eq 'Internet Protocol Version 4 (TCP/IPv4)'} | 
-                                Get-NetIPConfiguration | Where-Object IPv4DefaultGateway
+                                Get-NetIPConfiguration | Where-Object IPv4DefaultGateway | Sort-Object IPv4Address
                         )
                         $netAdapters = Get-NetAdapter -Name ($ipConfig.InterfaceAlias)
                         $VerbosePreference=$using:VerbosePreference
@@ -285,7 +284,7 @@ Function Configure-AzsHciClusterNetwork
                     Invoke-Command -Session $psSession -ScriptBlock {
                         $ipConfig = (
                             Get-NetAdapter -Physical | Get-NetAdapterBinding | Where-Object {$_.enabled -eq $true -and $_.DisplayName -eq 'Internet Protocol Version 4 (TCP/IPv4)'} | 
-                                Get-NetIPConfiguration | Where-Object IPv4DefaultGateway
+                                Get-NetIPConfiguration | Where-Object IPv4DefaultGateway | Sort-Object IPv4Address
                         )
                         $netAdapters = Get-NetAdapter -Name ($ipConfig.InterfaceAlias)
                         $VerbosePreference=$using:VerbosePreference
@@ -303,8 +302,8 @@ Function Configure-AzsHciClusterNetwork
                     Write-Verbose "[Configure ComputeAndStorageInterfaces]: OneVirtualSwitchforAllTraffic - Configuring ComputeAndStorageInterfaces"
                     Invoke-Command -Session $psSession -ScriptBlock {
                         $ipConfig = (
-                            Get-NetAdapter -Physical | Where-Object status -ne disabled | Get-NetAdapterBinding | ? {$_.enabled -eq $true -and $_.DisplayName -eq 'Internet Protocol Version 4 (TCP/IPv4)'} | 
-                                Get-NetIPConfiguration | Where-Object {$_.IPv4DefaultGateway -eq $null -and $_.IPv4Address.Ipaddress -like "192.168.25*"}
+                            Get-NetAdapter -Physical | Where-Object status -ne disabled | Get-NetAdapterBinding | Where-Object {$_.enabled -eq $true -and $_.DisplayName -eq 'Internet Protocol Version 4 (TCP/IPv4)'} | 
+                                Get-NetIPConfiguration | Where-Object {$_.IPv4DefaultGateway -eq $null -and $_.IPv4Address.Ipaddress -like "192.168.25*"} | Sort-Object IPv4Address
                         )
                         $netAdapters = Get-NetAdapter -Name ($ipConfig.InterfaceAlias)
                         $VerbosePreference=$using:VerbosePreference
@@ -338,13 +337,15 @@ Function Configure-AzsHciClusterNetwork
                         
                         $ipConfigCompute = (
                             Get-NetAdapter -Physical | Where-Object status -ne disabled | Get-NetAdapterBinding | ? {$_.enabled -eq $true -and $_.DisplayName -eq 'Internet Protocol Version 4 (TCP/IPv4)'} | 
-                                Get-NetIPConfiguration | Where-Object {($_.IPv4DefaultGateway -eq $null) -and ($_.IPv4Address.Ipaddress -like "192.168.251.*" -or $_.IPv4Address.Ipaddress -like "192.168.252.*")}
+                                Get-NetIPConfiguration | Where-Object {($_.IPv4DefaultGateway -eq $null) -and ($_.IPv4Address.Ipaddress -like "192.168.251.*" -or $_.IPv4Address.Ipaddress -like "192.168.252.*")} | 
+                                Sort-Object IPv4Address
                         )
                         $netAdaptersCompute = Get-NetAdapter -Name ($ipConfigCompute.InterfaceAlias)
                         
                         $ipConfigStorage = (
                             Get-NetAdapter -Physical | Where-Object status -ne disabled | Get-NetAdapterBinding | ? {$_.enabled -eq $true -and $_.DisplayName -eq 'Internet Protocol Version 4 (TCP/IPv4)'} | 
-                            Get-NetIPConfiguration | Where-Object {($_.IPv4DefaultGateway -eq $null) -and ($_.IPv4Address.Ipaddress -like "192.168.253.*" -or $_.IPv4Address.Ipaddress -like "192.168.254.*")}
+                            Get-NetIPConfiguration | Where-Object {($_.IPv4DefaultGateway -eq $null) -and ($_.IPv4Address.Ipaddress -like "192.168.253.*" -or $_.IPv4Address.Ipaddress -like "192.168.254.*")} | 
+                            Sort-Object IPv4Address
                         )                        
                         #$ipConfigStorage = (Get-NetAdapter -Physical | Where-Object status -ne disabled | Get-NetIPConfiguration | Where-Object {($_.IPv4DefaultGateway -eq $null) -and ($_.IPv4Address.Ipaddress -like "192.168.253.*" -or $_.IPv4Address.Ipaddress -like "192.168.254.*")})
                         $netAdaptersStorage = Get-NetAdapter -Name ($ipConfigStorage.InterfaceAlias)
@@ -377,13 +378,15 @@ Function Configure-AzsHciClusterNetwork
                         
                         $ipConfigCompute = (
                             Get-NetAdapter -Physical | Where-Object status -ne disabled | Get-NetAdapterBinding | Where-Object {$_.enabled -eq $true -and $_.DisplayName -eq 'Internet Protocol Version 4 (TCP/IPv4)'} | 
-                                Get-NetIPConfiguration | Where-Object {($_.IPv4DefaultGateway -eq $null) -and ($_.IPv4Address.Ipaddress -like "192.168.251.*" -or $_.IPv4Address.Ipaddress -like "192.168.252.*")}
+                                Get-NetIPConfiguration | Where-Object {($_.IPv4DefaultGateway -eq $null) -and ($_.IPv4Address.Ipaddress -like "192.168.251.*" -or $_.IPv4Address.Ipaddress -like "192.168.252.*")} | 
+                                Sort-Object IPv4Address
                         )
                         $netAdaptersCompute = Get-NetAdapter -Name ($ipConfigCompute.InterfaceAlias)
                         
                         $ipConfigStorage = (
                             Get-NetAdapter -Physical | Where-Object status -ne disabled | Get-NetAdapterBinding | ? {$_.enabled -eq $true -and $_.DisplayName -eq 'Internet Protocol Version 4 (TCP/IPv4)'} | 
-                            Get-NetIPConfiguration | Where-Object {($_.IPv4DefaultGateway -eq $null) -and ($_.IPv4Address.Ipaddress -like "192.168.253.*" -or $_.IPv4Address.Ipaddress -like "192.168.254.*")}
+                            Get-NetIPConfiguration | Where-Object {($_.IPv4DefaultGateway -eq $null) -and ($_.IPv4Address.Ipaddress -like "192.168.253.*" -or $_.IPv4Address.Ipaddress -like "192.168.254.*")} | 
+                            Sort-Object IPv4Address
                         )
                         $netAdaptersStorage = Get-NetAdapter -Name ($ipConfigStorage.InterfaceAlias)
                         
@@ -462,19 +465,19 @@ function Erase-AzsHciClusterDisks
         Write-Verbose "Cleaning up previously configured S2D Disks"
         Invoke-Command -Session $psSession -ScriptBlock {
             Update-StorageProviderCache
-            Get-StoragePool | ? IsPrimordial -eq $false | Set-StoragePool -IsReadOnly:$false -ErrorAction SilentlyContinue
-            Get-StoragePool | ? IsPrimordial -eq $false | Get-VirtualDisk | Remove-VirtualDisk -Confirm:$false -ErrorAction SilentlyContinue
-            Get-StoragePool | ? IsPrimordial -eq $false | Remove-StoragePool -Confirm:$false -ErrorAction SilentlyContinue
+            Get-StoragePool | Where-Object IsPrimordial -eq $false | Set-StoragePool -IsReadOnly:$false -ErrorAction SilentlyContinue
+            Get-StoragePool | Where-Object IsPrimordial -eq $false | Get-VirtualDisk | Remove-VirtualDisk -Confirm:$false -ErrorAction SilentlyContinue
+            Get-StoragePool | Where-Object IsPrimordial -eq $false | Remove-StoragePool -Confirm:$false -ErrorAction SilentlyContinue
             Get-PhysicalDisk | Reset-PhysicalDisk -ErrorAction SilentlyContinue
-            Get-Disk | ? Number -ne $null | ? IsBoot -ne $true | ? IsSystem -ne $true | ? PartitionStyle -ne RAW | % {
+            Get-Disk | Where-Object Number -ne $null | Where-Object IsBoot -ne $true | Where-Object IsSystem -ne $true | Where-Object PartitionStyle -ne RAW | Forech-Object {
                 $_ | Set-Disk -isoffline:$false
                 $_ | Set-Disk -isreadonly:$false
                 $_ | Clear-Disk -RemoveData -RemoveOEM -Confirm:$false
                 $_ | Set-Disk -isreadonly:$true
                 $_ | Set-Disk -isoffline:$true
             }
-            Get-Disk | Where Number -Ne $Null | Where IsBoot -Ne $True | Where IsSystem -Ne $True | Where PartitionStyle -Eq RAW | Group -NoElement -Property FriendlyName
-        } | Sort -Property PsComputerName, Count
+            Get-Disk | Where-Object Number -Ne $Null | Where-Object IsBoot -Ne $True | Where-Object IsSystem -Ne $True | Where-Object PartitionStyle -Eq RAW | Group -NoElement -Property FriendlyName
+        } | Sort-Object -Property PsComputerName, Count
     }
 
     End
@@ -518,7 +521,7 @@ function Setup-AzsHciCluster
         Write-Verbose "Enabling Cluster using name: $ClusterName"
         New-Cluster -Name $ClusterName -Node $AzureStackHCIHosts.Name -NoStorage -Force
         Write-Verbose "Enabling Storage Spaces Direct on Cluster: $ClusterName"
-        Enable-ClusterStorageSpacesDirect -PoolFriendlyName "Cluster1 Storage Pool" -CimSession $cimSession -Confirm:$false -SkipEligibilityChecks -ErrorAction SilentlyContinue
+        Enable-ClusterStorageSpacesDirect -PoolFriendlyName "Cluster Storage Pool" -CimSession $cimSession -Confirm:$false -SkipEligibilityChecks -ErrorAction SilentlyContinue
     }
 
     End

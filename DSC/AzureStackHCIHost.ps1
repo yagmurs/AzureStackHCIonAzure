@@ -175,7 +175,7 @@
             }
 
             SetScript = {
-                Start-BitsTransfer -Source $using:branchFiles -Destination "$using:sourcePath\$using:branch.zip"          
+                Start-BitsTransfer -Source $using:branchFiles -Destination "$using:sourcePath\$using:branch.zip"        
             }
 
             TestScript = {
