@@ -510,13 +510,13 @@ function Setup-AzsHciCluster
         Write-Verbose "Start testing cluster"
         Invoke-Command -ComputerName $AzureStackHCIHosts[0].Name -Authentication Credssp -Credential $cred -ScriptBlock {
            $VerbosePreference=$using:VerbosePreference
-            Test-Cluster –Node $using:AzureStackHCIHosts.Name –Include "Storage Spaces Direct", "Inventory", "Network", "System Configuration" -Cluster $ClusterName
-            Test-Cluster –Node $AzureStackHCIHosts.Name –Include "Storage Spaces Direct", "Inventory", "Network", "System Configuration" -Cluster $ClusterName
+            Test-Cluster â€“Node $using:AzureStackHCIHosts.Name â€“Include "Storage Spaces Direct", "Inventory", "Network", "System Configuration" -Cluster $ClusterName
+            Test-Cluster â€“Node $AzureStackHCIHosts.Name â€“Include "Storage Spaces Direct", "Inventory", "Network", "System Configuration" -Cluster $ClusterName
         }
         #>
 
         Write-Verbose "Enabling Cluster using name: $ClusterName"
-        New-Cluster –Name $ClusterName –Node $AzureStackHCIHosts.Name –NoStorage -Force
+        New-Cluster -Name $ClusterName -Node $AzureStackHCIHosts.Name -NoStorage -Force
         Write-Verbose "Enabling Storage Spaces Direct on Cluster: $ClusterName"
         Enable-ClusterStorageSpacesDirect -PoolFriendlyName "Cluster1 Storage Pool" -CimSession $cimSession -Confirm:$false -SkipEligibilityChecks -ErrorAction SilentlyContinue
     }
