@@ -170,12 +170,12 @@
         script "Download branch files for $branch"
         {
             GetScript = {
-                $result = Test-Path -Path "$using:sourcePath\$branch.zip"
+                $result = Test-Path -Path "$using:sourcePath\$using:branch.zip"
                 return @{ 'Result' = $result }
             }
 
             SetScript = {
-                Start-BitsTransfer -Source $branchFiles -Destination "$using:sourcePath\$branch.zip"          
+                Start-BitsTransfer -Source $using:branchFiles -Destination "$using:sourcePath\$using:branch.zip"          
             }
 
             TestScript = {
