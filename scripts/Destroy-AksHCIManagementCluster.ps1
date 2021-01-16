@@ -1,0 +1,2 @@
+#Destroy
+Uninstall-AksHci
