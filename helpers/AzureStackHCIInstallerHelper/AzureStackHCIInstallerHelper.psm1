@@ -307,7 +307,7 @@ Function Configure-AzsHciClusterNetwork
 
             if ($vSwitch.Name -contains $using:vSwitchNameMgmt)
             {
-                Write-Warning -Message "[Cleanup]: $env:COMPUTERNAME Network connection will be interupted for couple of minutes, be patient"
+                Write-Warning -Message "[Cleanup]: $env:COMPUTERNAME Network connection will be interupted for couple of minutes, be patient!!"
                     
             }
             $vSwitch | Remove-VMSwitch -Force
@@ -370,7 +370,7 @@ Function Configure-AzsHciClusterNetwork
             switch ($ManagementInterfaceConfig) {
                 "HighAvailable" {
                     Write-Verbose "[Configure ManagementInterfaceConfig]: HighAvailable - Configuring Management Interface"
-                    Write-Warning -Message "[Configure ManagementInterfaceConfig]: Network connection will be interupted for couple of minutes, be patient"
+                    Write-Warning -Message "[Configure ManagementInterfaceConfig]: Network connection will be interupted for couple of minutes, be patient!!"
                     Invoke-Command -Session $psSession -ScriptBlock {
                         $ipConfig = (
                             Get-NetAdapter -Physical | Get-NetAdapterBinding | Where-Object {$_.enabled -eq $true -and $_.DisplayName -eq 'Internet Protocol Version 4 (TCP/IPv4)'} | 
@@ -896,7 +896,7 @@ function Start-AzureStackHciSetup
         Prepare Azure Stack HCI Cluster with Aks Hci pre-requisites
         
         0. Prepare for Aks Hci Deployment ( !!Default selection!! )
-        1. Prepare for Aks Hci Deployment yet. 
+        1. Do NOT Prepare for Aks Hci Deployment yet. 
 
     ============================================================================================
 
@@ -930,7 +930,7 @@ function Start-AzureStackHciSetup
         switch ($RolesConfigurationProfileSelection)
         {
             1 {Configure-AzsHciClusterRoles -Verbose}
-            Default {Write-Warning "[Configure-AzsHciClusterRoles]: Not installing Roles and  Feature, assuming All Roles and Features required are already installed. Subsequent process may rely on Roles and Features Installation."} 
+            Default {Write-Warning "[Configure-AzsHciClusterRoles]: Not installing Roles and  Features, assuming All Roles and Features required are already installed. Subsequent process may rely on Roles and Features Installation."} 
         }
   
         switch ($NetworkConfigurationProfileSelection)
@@ -949,8 +949,8 @@ function Start-AzureStackHciSetup
 
         switch ($DisksConfigurationProfileSelection)
         {
-            1 {Write-Warning "[Erase-AzsHciClusterDisks]: Assuming this is first installation on top of clean environment. Otherwise subsequent process may fail."} 
-            default {Erase-AzsHciClusterDisks -Verbose}
+            1 {Erase-AzsHciClusterDisks -Verbose} 
+            default {Write-Warning "[Erase-AzsHciClusterDisks]: Assuming this is first installation on top of clean environment. Otherwise subsequent process may fail."}
         }
 
         switch ($ClusterConfigurationProfileSelection)
