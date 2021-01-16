@@ -949,8 +949,8 @@ function Start-AzureStackHciSetup
 
         switch ($DisksConfigurationProfileSelection)
         {
-            1 {Write-Warning "[Erase-AzsHciClusterDisks]: Assuming this is first installation on top of clean environment. Otherwise subsequent process may fail."} 
-            default {Erase-AzsHciClusterDisks -Verbose}
+            1 {Erase-AzsHciClusterDisks -Verbose}
+            default {Write-Warning "[Erase-AzsHciClusterDisks]: Assuming this is first installation on top of clean environment. Otherwise subsequent process may fail."} 
         }
 
         switch ($ClusterConfigurationProfileSelection)
