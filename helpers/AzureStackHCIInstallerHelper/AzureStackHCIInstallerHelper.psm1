@@ -19,7 +19,6 @@ function Cleanup-VMs
     Begin
     {
         #initializing variables
-        $AzureStackHCIHosts = Get-VM hpv*
         $domainName = (Get-ADDomain).DnsRoot
         $dhcpScopeString = '192.168.0.0'
 
@@ -28,40 +27,58 @@ function Cleanup-VMs
     {
         if ($AzureStackHciHostVMs)
         {
-            $AzureStackHCIClusterName = 'Hci01'
+            $AzureStackHCIClusterName = 'hci01'
             $AzureStackHCIHosts = Get-VM "hpv*"
+            $ouName = $AzureStackHCIClusterName
+            $servers = $AzureStackHCIHosts.Name + $AzureStackHCIClusterName
 
-            Write-Verbose "[Cleanup-VMs]: Removing Azure Stack HCI hosts and related DHCP, DNS records"
+            Write-Verbose "[Cleanup-VMs]: Removing Azure Stack HCI hosts, cluster and related DHCP, DNS records and computer accounts"
             #remove Azure Stack HCI hosts
             $AzureStackHCIHosts | Stop-VM -TurnOff -Passthru | Remove-VM -Force
             Remove-Item -Path $AzureStackHCIHosts.ConfigurationLocation -Recurse -Force
 
             #remove Azure Stack HCI hosts DNS records, DHCP leases and Disable Computer Accounts
+            Write-Verbose "[Cleanup-VMs]: Removing Dns Records for $($AzureStackHCIHosts.Name + "." + "$domainname")"
             $AzureStackHCIHosts.Name | ForEach-Object {Get-DnsServerResourceRecord -ZoneName $domainName -Name $_ -ErrorAction SilentlyContinue | Remove-DnsServerResourceRecord -ZoneName $domainName -Force}
-            $AzureStackHCIHosts.Name | ForEach-Object {Get-DhcpServerv4Lease -ScopeId $dhcpScopeString -ErrorAction SilentlyContinue | Where-Object hostname -like $_* | Remove-DhcpServerv4Lease}
-            $AzureStackHCIHosts.Name | ForEach-Object {Set-ADComputer -Identity $_ -Enabled $false -ErrorAction SilentlyContinue}
-            Set-ADComputer -Identity $AzureStackHCIClusterName -Enabled $false -ErrorAction SilentlyContinue
             
+            Write-Verbose "[Cleanup-VMs]: Removing Dhcp lease for $($AzureStackHCIHosts.Name)"
+            $AzureStackHCIHosts.Name | ForEach-Object {Get-DhcpServerv4Lease -ScopeId $dhcpScopeString -ErrorAction SilentlyContinue | Where-Object hostname -like $_* | Remove-DhcpServerv4Lease}
+            
+            Write-Verbose "[Cleanup-VMs]: Removing Dns Records for $($AzureStackHCIClusterName + "." + "$domainname")"
+            $AzureStackHCIClusterName | ForEach-Object {Get-DnsServerResourceRecord -ZoneName $domainName -Name $_ -ErrorAction SilentlyContinue | Remove-DnsServerResourceRecord -ZoneName $domainName -Force}
+            
+            Write-Verbose "[Cleanup-VMs]: Removing Dhcp lease for $AzureStackHCIClusterName"
+            $AzureStackHCIClusterName | ForEach-Object {Get-DhcpServerv4Lease -ScopeId $dhcpScopeString -ErrorAction SilentlyContinue | Where-Object hostname -like $_* | Remove-DhcpServerv4Lease}
+            
+            Write-Verbose "[Cleanup-VMs]: Removing AD Computer for $servers"
+            $servers | Get-ADComputer -ErrorAction SilentlyContinue | Remove-ADObject -Recursive -Confirm:$false
+            
+            Write-Verbose "[Cleanup-VMs]: Removing the OU: $ouName"
+            Get-ADOrganizationalUnit -Filter * | where-object name -eq $ouName | Set-ADOrganizationalUnit -ProtectedFromAccidentalDeletion $false -PassThru | Remove-ADOrganizationalUnit -Recursive -Confirm:$false
         }
 
         if ($WindowsAdminCenterVM)
         {
             $wac = Get-VM wac
-            Write-Verbose "[Cleanup-VMs]: Removing Windows Center VM and related DHCP, DNS records"
+            Write-Verbose "[Cleanup-VMs]: Removing Windows Center VM and related DHCP, DNS records and computer account"
             #remove Windows Admin Center host
             $wac | Stop-VM -TurnOff -Passthru | Remove-VM -Force
             Remove-Item -Path $wac.ConfigurationLocation -Recurse -Force
             
             #remove Windows Admin Center host DNS record, DHCP lease
+            Write-Verbose "[Cleanup-VMs]: Removing Dns Records for $($wac.Name + "." + "$domainname")"
             Get-DnsServerResourceRecord -ZoneName $domainName -Name $wac.Name -ErrorAction SilentlyContinue | Remove-DnsServerResourceRecord -ZoneName $domainName -Force
+            Write-Verbose "[Cleanup-VMs]: Removing Dhcp lease for $($wac.Name)"
             Get-DhcpServerv4Lease -ScopeId $dhcpScopeString -ErrorAction SilentlyContinue | Where-Object hostname -like $wac.Name | Remove-DhcpServerv4Lease
+            Write-Verbose "[Cleanup-VMs]: Removing AD Computer for $($wac.Name)"
+            $wac.name | Get-ADComputer | Remove-ADObject -Recursive -Confirm:$false
         }
 
-        if ($RedeployDeletedVMs)
-        {
-            Write-Verbose "[Cleanup-VMs]: Recalling DSC config to restore default state"
-            Start-DscConfiguration -UseExisting -Wait -Force
-        }
+        Write-Verbose "[Cleanup-VMs]: Recalling DSC config to restore default state."
+        Start-DscConfiguration -UseExisting -Wait -Force
+        Write-Verbose "[Cleanup-VMs]: DSC config re-applied, check for any error!"
+        Write-Verbose "[Prepare AD]: Creating computer accounts in AD if not exist and configuring delegations for Windows Admin Center"
+        Prepare-AdforAzsHciDeployment
 
     }
     End
@@ -83,26 +100,55 @@ function Prepare-AdforAzsHciDeployment
         $wac = "wac"
         $AzureStackHCIHosts = Get-VM hpv*
         $AzureStackHCIClusterName = "hci01"
-        $servers = $AzureStackHCIHosts.Name + $AzureStackHCIClusterName
         $ouName = "hci01"
     }
     Process
     {
         #New organizational Unit for cluster
-        $dn = New-ADOrganizationalUnit -Name $ouName -PassThru
-
+        $dn = Get-ADOrganizationalUnit -Filter * | Where-Object name -eq $ouName
+        if (-not ($dn))
+        {
+            $dn = New-ADOrganizationalUnit -Name $ouName -PassThru
+        }
+        
         #Get Wac Computer Object
-        $wacObject = Get-AdComputer -Identity $wac
+        $wacObject = Get-ADComputer -Filter * | Where-Object name -eq wac
+        if (-not ($wacObject))
+        {
+            $wacObject = New-ADComputer -Name $wac -Enabled $false -PassThru
+        }
 
-        #Creates Azure Stack HCI hosts and Cluster CNO
-        $servers | ForEach-Object {Set-ADComputer -Identity $_ -PrincipalsAllowedToDelegateToAccount $wacObject}
+        #Creates Azure Stack HCI hosts if not exist
+        $AzureStackHCIHosts.Name | ForEach-Object {
+            $comp = Get-ADComputer -Filter * | Where-Object name -eq $_
+            if (-not ($comp))
+            {
+                New-ADComputer -Name $_ -Enabled $false -Path $dn -PrincipalsAllowedToDelegateToAccount $wacObject
+            }
+            else
+            {
+                $comp | Set-ADComputer -PrincipalsAllowedToDelegateToAccount $wacObject
+                $comp | Move-AdObject -TargetPath $dn
+            }
+        }
+
+        #Creates Azure Stack HCI Cluster CNO if not exist
+        $AzureStackHCIClusterObject = Get-ADComputer -Filter * | Where-Object name -eq $AzureStackHCIClusterName
+        if (-not ($AzureStackHCIClusterObject))
+        {
+            $AzureStackHCIClusterObject = New-ADComputer -Name $AzureStackHCIClusterName -Enabled $false -Path $dn -PrincipalsAllowedToDelegateToAccount $wacObject -PassThru
+        }
+        else
+        {
+            $AzureStackHCIClusterObject | Set-ADComputer -PrincipalsAllowedToDelegateToAccount $wacObject
+            $AzureStackHCIClusterObject | Move-AdObject -TargetPath $dn
+        }    
 
         #read OU DACL
         $acl = Get-Acl -Path "AD:\$dn"
 
         # Set properties to allow Cluster CNO to Full Control on the new OU
-        $identity = (Get-ADComputer -Identity $AzureStackHCIClusterName)
-        $principal = New-Object System.Security.Principal.SecurityIdentifier ($identity).SID
+        $principal = New-Object System.Security.Principal.SecurityIdentifier ($AzureStackHCIClusterObject).SID
         $ace = New-Object System.DirectoryServices.ActiveDirectoryAccessRule($principal, [System.DirectoryServices.ActiveDirectoryRights]::GenericAll, [System.Security.AccessControl.AccessControlType]::Allow, [DirectoryServices.ActiveDirectorySecurityInheritance]::All)
 
         #modify DACL
@@ -541,7 +587,7 @@ function Erase-AzsHciClusterDisks
     }
 }
 
-function Setup-AzsHciCluster
+function Configure-AzsHciCluster
 {
     [CmdletBinding()]
     Param
@@ -640,4 +686,241 @@ function Prepare-AzsHciClusterforAksHciDeployment
     End
     {
     }
+}
+
+function Start-AzureStackHciSetup
+{
+    param (
+
+        [Parameter(Mandatory=$false)]
+        [ValidateSet($null,0,1,2,3)]
+        [int]
+        $CleanupVMs,
+
+        [Parameter(Mandatory=$false)]
+        [int]
+        [ValidateSet($null,0,1)]
+        $RolesConfigurationProfile,
+
+        [Parameter(Mandatory=$false)]
+        [int]
+        [ValidateSet($null,0,1,2,3,4,5,6,7,8,9)]
+        $NetworkConfigurationProfile,
+
+        [Parameter(Mandatory=$false)]
+        [int]
+        [ValidateSet($null,0,1)]
+        $DisksConfigurationProfile,
+
+        [Parameter(Mandatory=$false)]
+        [int]
+        [ValidateSet($null,0,1)]
+        $ClusterConfigurationProfile,
+
+        [Parameter(Mandatory=$false)]
+        [int]
+        [ValidateSet($null,0,1)]
+        $AksHciConfigurationProfile
+
+    )
+
+    begin
+    {
+
+        #Initialize variables
+        $AzureStackHCIHosts = Get-VM -Name hpv*
+        $cimSession = New-CimSession -ComputerName $AzureStackHCIHosts.name
+        $sleep = 10
+
+    }
+
+    process
+    {
+
+        if (-not ($CleanupVMs)){}
+        {
+            $CleanupVMs = Read-Host  @"
+
+    ============================================================================================
+
+    Cleanup VMs option to start from scratch?
+        This option will destroy All VMs or selected VMs.
+        
+        0. Do NOT Cleanup ( !!Default selection!! )
+        1. Yes, Cleanup all VMs
+        2. Yes, Cleanup Windows Admin Center Only!
+        3. Yes, Cleanup Azure Stack HCI Hosts Only!
+        
+    ============================================================================================
+
+    Select
+"@
+        }
+
+        if (-not ($RolesConfigurationProfile)){}
+        {
+            $RolesConfigurationProfile = Read-Host  @"
+
+    ============================================================================================
+
+    Azure Stack HCI Roles and Features Installation options
+        Roles are installed by default. (Optional)
+        
+        0. Do NOT install any Roles ( !!Default selection!! )
+        1. Install required roles to Azure Stack HCI Hosts
+        
+
+    ============================================================================================
+
+    Select
+"@
+        }
+
+        if (-not ($NetworkConfigurationProfile)){}
+        {
+            $NetworkConfigurationProfile = Read-Host  @"
+
+    ============================================================================================
+
+    Azure Stack HCI Network Adapter Configuration options (SET Switch)
+        
+        0. High-available Management & One Virtual Switch for All Traffic ( !!Default selection!! )
+        1. High-available networks for Management & One Virtual Switch for Compute Only
+        2. High-available networks for Managament & Two Virtual Switches
+        3. Single Network Adapter for Management & One Virtual Switch for All Traffic
+        4. Single Network Adapter for Management & One Virtual Switch for Compute Only
+        5. Single Network Adapter for Management & Two Virtual Switches for Compute and Storage
+        
+    Includes reseting Current config (recommended if redeploying)
+        
+        6. High-available networks for Management & One Virtual Switch for All Traffic
+        7. Single Network Adapter for Management & One Virtual Switch for Compute Only
+        8. High-available networks for Managament & Two Virtual Switches
+        9. Do NOT configure networks
+ 
+
+    ============================================================================================
+        
+    Select
+"@
+        }
+
+        if (-not ($DisksConfigurationProfile)){}
+        {
+            $DisksConfigurationProfile = Read-Host  @"
+
+    ============================================================================================
+
+    Azure Stack HCI Disks cleanup options
+        Please do so, if this is NOT first installation on top of clean environment. (Optional)
+        
+        0. Do NOT erase and cleanup ( !!Default selection!! )
+        1. Erase all drives
+
+    ============================================================================================
+
+    Select
+"@
+        
+        }
+
+        if (-not ($ClusterConfigurationProfile)){}
+        {
+            $ClusterConfigurationProfile = Read-Host  @"
+
+    ============================================================================================
+
+    Azure Stack HCI Cluster options
+        Install cluster using default name to prevent any misconfigurations
+        
+        0. Enable Cluster using default Name (Cluster Name: hci01) ( !!Default selection!! )
+        1. Do NOT Create Cluster yet.   
+
+    ============================================================================================
+
+    Select
+"@
+
+        }
+
+        if (-not ($AksHciConfigurationProfile)){}
+        {
+            $AksHciConfigurationProfile = Read-Host  @"
+
+    ============================================================================================
+
+    Azure Stack HCI Cluster AKS HCI preparation options
+        Prepare Azure Stack HCI Cluster with Aks Hci pre-requisites
+        
+        0. Prepare for Aks Hci Deployment ( !!Default selection!! )
+        1. Prepare for Aks Hci Deployment yet. 
+
+    ============================================================================================
+
+    Select
+"@
+
+        }
+    }
+
+    end
+    {
+
+        switch ($CleanupVMs)
+        {
+            1 {Cleanup-VMs -AzureStackHciHostVMs -WindowsAdminCenterVM -Verbose}
+            2 {Cleanup-VMs -WindowsAdminCenterVM -Verbose}
+            3 {Cleanup-VMs -AzureStackHciHostVMs -Verbose}
+            Default {Write-Warning "[Configure-AzsHciClusterRoles]: Not installing Roles and  Feature, assuming All Roles and Features required are already installed. Subsequent process may rely on Roles and Features Installation."} 
+        }
+
+        Prepare-AdforAzsHciDeployment
+
+        do
+        {
+            Clear-DnsClientCache
+            Write-Verbose "Waiting for Azure Stack HCI hosts to finalize initial DSC configuration for $sleep seconds" -Verbose
+            Start-Sleep -Seconds $sleep    
+        }
+        while (((Get-DscLocalConfigurationManager -CimSession $cimSession -ErrorAction SilentlyContinue | Select-Object -ExpandProperty lcmstate) -contains "busy" -or (Get-DscLocalConfigurationManager -CimSession $cimSession  -ErrorAction SilentlyContinue | Select-Object -ExpandProperty lcmstate) -contains "PendingConfiguration"))
+
+        switch ($RolesConfigurationProfile)
+        {
+            1 {Configure-AzsHciClusterRoles -Verbose}
+            Default {Write-Warning "[Configure-AzsHciClusterRoles]: Not installing Roles and  Feature, assuming All Roles and Features required are already installed. Subsequent process may rely on Roles and Features Installation."} 
+        }
+  
+        switch ($NetworkConfigurationProfile)
+        {
+            1 {Configure-AzsHciClusterNetwork -ManagementInterfaceConfig HighAvailable -Verbose -ComputeAndStorageInterfaceConfig OneVirtualSwitchforComputeOnly}
+            2 {Configure-AzsHciClusterNetwork -ManagementInterfaceConfig HighAvailable -Verbose -ComputeAndStorageInterfaceConfig TwoVirtualSwitches}
+            3 {Configure-AzsHciClusterNetwork -ManagementInterfaceConfig SingleAdapter -Verbose -ComputeAndStorageInterfaceConfig OneVirtualSwitchforAllTraffic}
+            4 {Configure-AzsHciClusterNetwork -ManagementInterfaceConfig SingleAdapter -Verbose -ComputeAndStorageInterfaceConfig OneVirtualSwitchforComputeOnly}
+            5 {Configure-AzsHciClusterNetwork -ManagementInterfaceConfig SingleAdapter -Verbose -ComputeAndStorageInterfaceConfig TwoVirtualSwitches}
+            6 {Configure-AzsHciClusterNetwork -ManagementInterfaceConfig HighAvailable -Verbose -ComputeAndStorageInterfaceConfig OneVirtualSwitchforAllTraffic -ForceCleanup}
+            7 {Configure-AzsHciClusterNetwork -ManagementInterfaceConfig SingleAdapter -Verbose -ComputeAndStorageInterfaceConfig OneVirtualSwitchforComputeOnly -ForceCleanup}
+            8 {Configure-AzsHciClusterNetwork -ManagementInterfaceConfig HighAvailable -Verbose -ComputeAndStorageInterfaceConfig TwoVirtualSwitches -ForceCleanup}
+            9 {Write-Warning "[Configure-AzsHciClusterNetwork]: Assuming Networks are already configures!"}
+            Default {Configure-AzsHciClusterNetwork -ManagementInterfaceConfig HighAvailable -Verbose -ComputeAndStorageInterfaceConfig OneVirtualSwitchforAllTraffic}
+        }
+
+        switch ($DisksConfigurationProfile)
+        {
+            1 {Write-Warning "[Erase-AzsHciClusterDisks]: Assuming this is first installation on top of clean environment. Otherwise subsequent process may fail."} 
+            default {Erase-AzsHciClusterDisks -Verbose}
+        }
+
+        switch ($ClusterConfigurationProfile)
+        {
+            1 {Write-Warning "You may need to configure cluster manually!"}
+            Default {Configure-AzsHciCluster -ClusterName hci01 -Verbose} 
+        }
+
+        switch ($AksHciConfigurationProfile)
+        {
+            1 {Write-Warning "You may need to prepare Azure Stack HCI cluster for Aks Hci pre-requisites manually!"}
+            Default {Prepare-AzsHciClusterforAksHciDeployment -Verbose} 
+        }
+
+    }    
 }
