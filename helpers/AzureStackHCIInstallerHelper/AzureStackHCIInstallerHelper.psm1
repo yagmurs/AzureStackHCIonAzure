@@ -914,7 +914,7 @@ function Start-AzureStackHciSetup
             1 {Cleanup-VMs -AzureStackHciHostVMs -WindowsAdminCenterVM -Verbose}
             2 {Cleanup-VMs -WindowsAdminCenterVM -Verbose}
             3 {Cleanup-VMs -AzureStackHciHostVMs -Verbose}
-            Default {Write-Warning "[Configure-AzsHciClusterRoles]: Not installing Roles and  Feature, assuming All Roles and Features required are already installed. Subsequent process may rely on Roles and Features Installation."} 
+            Default {Write-Warning "[Cleanup-VMs]: No Cleanup selected."} 
         }
 
         Prepare-AdforAzsHciDeployment
@@ -943,7 +943,7 @@ function Start-AzureStackHciSetup
             6 {Configure-AzsHciClusterNetwork -ManagementInterfaceConfig HighAvailable -Verbose -ComputeAndStorageInterfaceConfig OneVirtualSwitchforAllTraffic -ForceCleanup}
             7 {Configure-AzsHciClusterNetwork -ManagementInterfaceConfig SingleAdapter -Verbose -ComputeAndStorageInterfaceConfig OneVirtualSwitchforComputeOnly -ForceCleanup}
             8 {Configure-AzsHciClusterNetwork -ManagementInterfaceConfig HighAvailable -Verbose -ComputeAndStorageInterfaceConfig TwoVirtualSwitches -ForceCleanup}
-            9 {Write-Warning "[Configure-AzsHciClusterNetwork]: Assuming Networks are already configures!"}
+            9 {Write-Warning "[Configure-AzsHciClusterNetwork]: Assuming Networks are already configured!"}
             Default {Configure-AzsHciClusterNetwork -ManagementInterfaceConfig HighAvailable -Verbose -ComputeAndStorageInterfaceConfig OneVirtualSwitchforAllTraffic}
         }
 
