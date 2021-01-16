@@ -13,7 +13,7 @@ function Cleanup-VMs
 
         [Parameter(Mandatory=$false)]
         [Switch]
-        $RedeployDeletedVMs
+        $DoNotRedeploy
     )
 
     Begin
@@ -74,9 +74,13 @@ function Cleanup-VMs
             $wac.name | Get-ADComputer | Remove-ADObject -Recursive -Confirm:$false
         }
 
-        Write-Verbose "[Cleanup-VMs]: Recalling DSC config to restore default state."
-        Start-DscConfiguration -UseExisting -Wait -Force
-        Write-Verbose "[Cleanup-VMs]: DSC config re-applied, check for any error!"
+        if (-not ($DoNotRedeploy))
+        {
+            Write-Verbose "[Cleanup-VMs]: Recalling DSC config to restore default state."
+            Start-DscConfiguration -UseExisting -Wait -Force
+            Write-Verbose "[Cleanup-VMs]: DSC config re-applied, check for any error!"
+        }
+        
         Write-Verbose "[Prepare AD]: Creating computer accounts in AD if not exist and configuring delegations for Windows Admin Center"
         Prepare-AdforAzsHciDeployment
 
