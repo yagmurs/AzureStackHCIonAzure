@@ -86,7 +86,7 @@
         },
         "azsHCIHostMemory": {
             "type": "int",
-            "defaultValue": 16,
+            "defaultValue": 22,
             "metadata": {
                 "description": "Azure Stack HCI memory amount in GB"
             }
@@ -386,7 +386,7 @@
         },        
         {
             "type": "Microsoft.Compute/virtualMachines",
-            "apiVersion": "2019-07-01",
+            "apiVersion": "2020-06-01",
             "name": "[parameters('virtualMachineName')]",
             "location": "[parameters('location')]",
             "dependsOn": [
@@ -446,6 +446,11 @@
                             "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaceName'))]"
                         }
                     ]
+                },
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": true
+                    }
                 }
             },
             "resources": [

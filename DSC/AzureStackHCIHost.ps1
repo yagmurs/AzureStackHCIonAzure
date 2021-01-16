@@ -69,10 +69,14 @@
     Import-DscResource -ModuleName 'cChoco'
     Import-DscResource -ModuleName 'DSCR_Shortcut'
     
+    $branchFiles = "https://github.com/yagmurs/AzureStackHCIonAzure/archive/$branch.zip"
+    $aszhciHostsMofUri = "https://raw.githubusercontent.com/yagmurs/AzureStackHCIonAzure/$branch/helpers/Install-AzsRolesandFeatures.ps1"
     $wacMofUri = "https://raw.githubusercontent.com/yagmurs/AzureStackHCIonAzure/$branch/helpers/Install-WacUsingChoco.ps1"
     [System.Management.Automation.PSCredential]$DomainCreds = New-Object System.Management.Automation.PSCredential ("${DomainName}\$($Admincreds.UserName)", $Admincreds.Password)
-    $Interface=Get-NetAdapter | Where-Object Name -Like "Ethernet*" | Select-Object -First 1
-    $InterfaceAlias=$($Interface.Name)
+    
+    $ipConfig = (Get-NetAdapter -Physical | Get-NetIPConfiguration | Where-Object IPv4DefaultGateway)
+    $netAdapters = Get-NetAdapter -Name ($ipConfig.InterfaceAlias) | Select-Object -First 1
+    $InterfaceAlias=$($netAdapters.Name)
 
     Node localhost
     {
@@ -163,16 +167,16 @@
             TaskPath = '\Microsoft\Windows\Server Manager'
         }
 
-<#
-        script "Download Windows Admin Center"
+        script "Download branch files for $branch"
         {
             GetScript = {
-                $result = Test-Path -Path $using:wacLocalPath
+                $result = Test-Path -Path "$using:sourcePath\$using:branch.zip"
                 return @{ 'Result' = $result }
             }
 
             SetScript = {
-                Start-BitsTransfer -Source $using:wacUri -Destination $using:wacLocalPath           
+                Invoke-WebRequest -Uri $using:branchFiles -OutFile "$using:sourcePath\$using:branch.zip"
+                #Start-BitsTransfer -Source $using:branchFiles -Destination "$using:sourcePath\$using:branch.zip"        
             }
 
             TestScript = {
@@ -182,8 +186,8 @@
             }
             DependsOn = "[File]source"
         }
- #>
-        script "Download Mof for $wacVMName"
+
+        script "Download DSC Config for $wacVMName"
         {
             GetScript = {
                 $result = Test-Path -Path "$using:sourcePath\Install-WacUsingChoco.ps1"
@@ -192,6 +196,25 @@
 
             SetScript = {
                 Start-BitsTransfer -Source "$using:wacMofUri" -Destination "$using:sourcePath\Install-WacUsingChoco.ps1"          
+            }
+
+            TestScript = {
+                # Create and invoke a scriptblock using the $GetScript automatic variable, which contains a string representation of the GetScript.
+                $state = [scriptblock]::Create($GetScript).Invoke()
+                return $state.Result
+            }
+            DependsOn = "[File]source"
+        }
+
+        script "Download DSC Config for AzsHci Hosts"
+        {
+            GetScript = {
+                $result = Test-Path -Path "$using:sourcePath\Install-AzsRolesandFeatures.ps1"
+                return @{ 'Result' = $result }
+            }
+
+            SetScript = {
+                Start-BitsTransfer -Source "$using:aszhciHostsMofUri" -Destination "$using:sourcePath\Install-AzsRolesandFeatures.ps1"          
             }
 
             TestScript = {
@@ -220,7 +243,7 @@
             }
             DependsOn = "[File]source"
         }
-
+<#
         script "Download Windows Server 2019"
         {
             GetScript = {
@@ -239,7 +262,7 @@
             }
             DependsOn = "[File]source"
         }
-
+ #>
         WindowsFeature DNS 
         { 
             Ensure = "Present" 
@@ -548,7 +571,7 @@
             }
             DependsOn = "[file]VM-Base", "[script]Download AzureStack HCI bits"
         }
-
+<#
         script "prepareVHDX ws2019"
         {
             GetScript = {
@@ -567,7 +590,7 @@
             }
             DependsOn = "[file]VM-Base", "[script]Download Windows Server 2019"
         }
-
+ #>
         for ($i = 1; $i -lt $azsHostCount + 1; $i++)
         {
             $suffix = '{0:D2}' -f $i
@@ -764,10 +787,14 @@
                         
                         New-Item -Path $("$driveLetter" + ":" + "\Temp") -ItemType Directory -Force -ErrorAction Stop
                         
-                        #New-BasicUnattendXML -ComputerName $name -LocalAdministratorPassword $using:Admincreds.Password -OutputPath "$using:targetVMPath\$name" -Force -ErrorAction Stop
+                        Copy-Item -Path "$using:sourcePath\Install-AzsRolesandFeatures.ps1" -Destination $("$driveLetter" + ":" + "\Temp") -Force -ErrorAction Stop
 
                         New-BasicUnattendXML -ComputerName $name -LocalAdministratorPassword $($using:Admincreds).Password -Domain $using:DomainName -Username $using:Admincreds.Username `
-                        -Password $($using:Admincreds).Password -JoinDomain $using:DomainName -OutputPath "$using:targetVMPath\$name" -Force
+                            -Password $($using:Admincreds).Password -JoinDomain $using:DomainName -AutoLogonCount 1 -OutputPath "$using:targetVMPath\$name" -Force `
+                            -PowerShellScriptFullPath 'c:\temp\Install-AzsRolesandFeatures.ps1' -ErrorAction Stop
+
+                        #New-BasicUnattendXML -ComputerName $name -LocalAdministratorPassword $($using:Admincreds).Password -Domain $using:DomainName -Username $using:Admincreds.Username `
+                        #    -Password $($using:Admincreds).Password -JoinDomain $using:DomainName -OutputPath "$using:targetVMPath\$name" -Force
 
                         Copy-Item -Path "$using:targetVMPath\$name\Unattend.xml" -Destination $("$driveLetter" + ":" + "\Windows\system32\SysPrep") -Force -ErrorAction Stop
 
@@ -786,7 +813,7 @@
                     $state = [scriptblock]::Create($GetScript).Invoke()
                     return $state.Result
                 }
-                DependsOn = "[xVhd]NewOSDisk-$vmname"
+                DependsOn = "[xVhd]NewOSDisk-$vmname", "[script]Download DSC Config for AzsHci Hosts"
             }
         }
 
@@ -804,9 +831,9 @@
             Name             = "$wacVMName-OSDisk.vhdx"
             Path             = "$targetVMPath\$wacVMName"
             Generation       = 'vhdx'
-            ParentPath       = $ws2019VhdPath
+            ParentPath       = $azsHciVhdPath
             Type             = 'Differencing'
-            DependsOn = "[xVMSwitch]$vSwitchNameMgmt", "[script]prepareVHDX ws2019", "[file]VM-Folder-$wacVMName"
+            DependsOn = "[xVMSwitch]$vSwitchNameMgmt", "[script]prepareVHDX", "[file]VM-Folder-$wacVMName"
         }
 
         xVMHyperV "VM-$wacVMName"
@@ -893,7 +920,7 @@
                 $state = [scriptblock]::Create($GetScript).Invoke()
                 return $state.Result
             }
-            DependsOn = "[xVhd]NewOSDisk-$wacVMName", "[script]Download Mof for $wacVMName"
+            DependsOn = "[xVhd]NewOSDisk-$wacVMName", "[script]Download DSC Config for $wacVMName"
         }
 
         cChocoInstaller InstallChoco
