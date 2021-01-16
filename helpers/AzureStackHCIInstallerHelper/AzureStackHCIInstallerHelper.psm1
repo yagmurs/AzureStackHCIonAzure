@@ -13,7 +13,11 @@ function Cleanup-VMs
 
         [Parameter(Mandatory=$false)]
         [Switch]
-        $DoNotRedeploy
+        $DoNotRedeploy,
+
+        [Parameter(Mandatory=$false)]
+        [Switch]
+        $RemoveAllSourceFiles
     )
 
     Begin
@@ -72,6 +76,10 @@ function Cleanup-VMs
             Get-DhcpServerv4Lease -ScopeId $dhcpScopeString -ErrorAction SilentlyContinue | Where-Object hostname -like $wac.Name | Remove-DhcpServerv4Lease
             Write-Verbose "[Cleanup-VMs]: Removing AD Computer for $($wac.Name)"
             $wac.name | Get-ADComputer | Remove-ADObject -Recursive -Confirm:$false
+        }
+
+        if ($RemoveAllSourceFiles) {
+            Remove-Item v:\ -Recurse -Force
         }
 
         if (-not ($DoNotRedeploy))
