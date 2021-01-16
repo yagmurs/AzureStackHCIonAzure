@@ -25,6 +25,7 @@ function Cleanup-VMs
         #initializing variables
         $domainName = (Get-ADDomain).DnsRoot
         $dhcpScopeString = '192.168.0.0'
+        $sleep = 240
 
     }
     Process
@@ -81,12 +82,17 @@ function Cleanup-VMs
         if ($RemoveAllSourceFiles) {
             Remove-Item v:\ -Recurse -Force
         }
-
         if (-not ($DoNotRedeploy))
         {
             Write-Verbose "[Cleanup-VMs]: Recalling DSC config to restore default state."
             Start-DscConfiguration -UseExisting -Wait -Force
             Write-Verbose "[Cleanup-VMs]: DSC config re-applied, check for any error!"
+            if ($AzureStackHciHostVMs)
+            {
+                Write-Verbose "[Cleanup-VMs]: Sleeping for $sleep seconds to make sure Azure Stack HCI hosts are reachable"
+                Start-Sleep -Seconds $sleep
+                Clear-DnsClientCache
+            }
         }
         
         Write-Verbose "[Prepare AD]: Creating computer accounts in AD if not exist and configuring delegations for Windows Admin Center"
@@ -581,7 +587,7 @@ function Erase-AzsHciClusterDisks
             Get-StoragePool | Where-Object IsPrimordial -eq $false | Get-VirtualDisk | Remove-VirtualDisk -Confirm:$false -ErrorAction SilentlyContinue
             Get-StoragePool | Where-Object IsPrimordial -eq $false | Remove-StoragePool -Confirm:$false -ErrorAction SilentlyContinue
             Get-PhysicalDisk | Reset-PhysicalDisk -ErrorAction SilentlyContinue
-            Get-Disk | Where-Object Number -ne $null | Where-Object IsBoot -ne $true | Where-Object IsSystem -ne $true | Where-Object PartitionStyle -ne RAW | Forech-Object {
+            Get-Disk | Where-Object Number -ne $null | Where-Object IsBoot -ne $true | Where-Object IsSystem -ne $true | Where-Object PartitionStyle -ne RAW | Foreach-Object {
                 $_ | Set-Disk -isoffline:$false
                 $_ | Set-Disk -isreadonly:$false
                 $_ | Clear-Disk -RemoveData -RemoveOEM -Confirm:$false
@@ -621,16 +627,8 @@ function Configure-AzsHciCluster
     Process
     {
         
-        <#
-        Write-Verbose "Start testing cluster"
-        Invoke-Command -ComputerName $AzureStackHCIHosts[0].Name -Authentication Credssp -Credential $cred -ScriptBlock {
-           $VerbosePreference=$using:VerbosePreference
-            Test-Cluster â€“Node $using:AzureStackHCIHosts.Name â€“Include "Storage Spaces Direct", "Inventory", "Network", "System Configuration" -Cluster $ClusterName
-            Test-Cluster â€“Node $AzureStackHCIHosts.Name â€“Include "Storage Spaces Direct", "Inventory", "Network", "System Configuration" -Cluster $ClusterName
-        }
-        #>
 
-        Write-Verbose "Enabling Cluster using name: $ClusterName"
+        Write-Verbose "Enabling Cluster: $ClusterName"
         New-Cluster -Name $ClusterName -Node $AzureStackHCIHosts.Name -NoStorage -Force
         Write-Verbose "Enabling Storage Spaces Direct on Cluster: $ClusterName"
         Enable-ClusterStorageSpacesDirect -PoolFriendlyName "Cluster Storage Pool" -CimSession $cimSession -Confirm:$false -SkipEligibilityChecks -ErrorAction SilentlyContinue
@@ -742,16 +740,20 @@ function Start-AzureStackHciSetup
         #Initialize variables
         $AzureStackHCIHosts = Get-VM -Name hpv*
         $cimSession = New-CimSession -ComputerName $AzureStackHCIHosts.name
-        $sleep = 10
+        $sleep = 20
 
     }
 
     process
     {
 
-        if (-not ($CleanupVMs)){}
+        if ($CleanupVMs)
         {
-            $CleanupVMs = Read-Host  @"
+            $CleanupVMsSelection = $CleanupVMs
+        }
+        else
+        {
+            $CleanupVMsSelection = Read-Host  @"
 
     ============================================================================================
 
@@ -769,9 +771,13 @@ function Start-AzureStackHciSetup
 "@
         }
 
-        if (-not ($RolesConfigurationProfile)){}
+        if ($RolesConfigurationProfile)
         {
-            $RolesConfigurationProfile = Read-Host  @"
+            $RolesConfigurationProfileSelection = $RolesConfigurationProfile
+        }
+        else
+        {
+            $RolesConfigurationProfileSelection = Read-Host  @"
 
     ============================================================================================
 
@@ -788,9 +794,13 @@ function Start-AzureStackHciSetup
 "@
         }
 
-        if (-not ($NetworkConfigurationProfile)){}
+        if ($NetworkConfigurationProfile)
         {
-            $NetworkConfigurationProfile = Read-Host  @"
+            $NetworkConfigurationProfileSelection = $NetworkConfigurationProfile
+        }
+        else
+        {
+            $NetworkConfigurationProfileSelection = Read-Host  @"
 
     ============================================================================================
 
@@ -817,9 +827,13 @@ function Start-AzureStackHciSetup
 "@
         }
 
-        if (-not ($DisksConfigurationProfile)){}
+        if ($DisksConfigurationProfile)
         {
-            $DisksConfigurationProfile = Read-Host  @"
+            $DisksConfigurationProfileSelection = $DisksConfigurationProfile
+        }
+        else
+        {
+            $DisksConfigurationProfileSelection = Read-Host  @"
 
     ============================================================================================
 
@@ -836,9 +850,13 @@ function Start-AzureStackHciSetup
         
         }
 
-        if (-not ($ClusterConfigurationProfile)){}
+        if ($ClusterConfigurationProfile)
         {
-            $ClusterConfigurationProfile = Read-Host  @"
+            $ClusterConfigurationProfileSelection = $ClusterConfigurationProfile
+        }
+        else
+        {
+            $ClusterConfigurationProfileSelection = Read-Host  @"
 
     ============================================================================================
 
@@ -855,9 +873,13 @@ function Start-AzureStackHciSetup
 
         }
 
-        if (-not ($AksHciConfigurationProfile)){}
+        if ($AksHciConfigurationProfile)
         {
-            $AksHciConfigurationProfile = Read-Host  @"
+            $AksHciConfigurationProfileSelection = $AksHciConfigurationProfile
+        }
+        else 
+        {
+            $AksHciConfigurationProfileSelection = Read-Host  @"
 
     ============================================================================================
 
@@ -878,7 +900,7 @@ function Start-AzureStackHciSetup
     end
     {
 
-        switch ($CleanupVMs)
+        switch ($CleanupVMsSelection)
         {
             1 {Cleanup-VMs -AzureStackHciHostVMs -WindowsAdminCenterVM -Verbose}
             2 {Cleanup-VMs -WindowsAdminCenterVM -Verbose}
@@ -891,18 +913,18 @@ function Start-AzureStackHciSetup
         do
         {
             Clear-DnsClientCache
-            Write-Verbose "Waiting for Azure Stack HCI hosts to finalize initial DSC configuration for $sleep seconds" -Verbose
+            Write-Verbose "Waiting for Azure Stack HCI hosts to finish initial DSC configuration for $sleep seconds" -Verbose
             Start-Sleep -Seconds $sleep    
         }
-        while (((Get-DscLocalConfigurationManager -CimSession $cimSession -ErrorAction SilentlyContinue | Select-Object -ExpandProperty lcmstate) -contains "busy" -or (Get-DscLocalConfigurationManager -CimSession $cimSession  -ErrorAction SilentlyContinue | Select-Object -ExpandProperty lcmstate) -contains "PendingConfiguration"))
+        while (((Get-DscLocalConfigurationManager -CimSession $cimSession -ErrorAction SilentlyContinue | Select-Object -ExpandProperty lcmstate) -contains "busy" -or (Get-DscLocalConfigurationManager -CimSession $cimSession -ErrorAction SilentlyContinue | Select-Object -ExpandProperty lcmstate) -contains "PendingConfiguration"))
 
-        switch ($RolesConfigurationProfile)
+        switch ($RolesConfigurationProfileSelection)
         {
             1 {Configure-AzsHciClusterRoles -Verbose}
             Default {Write-Warning "[Configure-AzsHciClusterRoles]: Not installing Roles and  Feature, assuming All Roles and Features required are already installed. Subsequent process may rely on Roles and Features Installation."} 
         }
   
-        switch ($NetworkConfigurationProfile)
+        switch ($NetworkConfigurationProfileSelection)
         {
             1 {Configure-AzsHciClusterNetwork -ManagementInterfaceConfig HighAvailable -Verbose -ComputeAndStorageInterfaceConfig OneVirtualSwitchforComputeOnly}
             2 {Configure-AzsHciClusterNetwork -ManagementInterfaceConfig HighAvailable -Verbose -ComputeAndStorageInterfaceConfig TwoVirtualSwitches}
@@ -916,19 +938,19 @@ function Start-AzureStackHciSetup
             Default {Configure-AzsHciClusterNetwork -ManagementInterfaceConfig HighAvailable -Verbose -ComputeAndStorageInterfaceConfig OneVirtualSwitchforAllTraffic}
         }
 
-        switch ($DisksConfigurationProfile)
+        switch ($DisksConfigurationProfileSelection)
         {
             1 {Write-Warning "[Erase-AzsHciClusterDisks]: Assuming this is first installation on top of clean environment. Otherwise subsequent process may fail."} 
             default {Erase-AzsHciClusterDisks -Verbose}
         }
 
-        switch ($ClusterConfigurationProfile)
+        switch ($ClusterConfigurationProfileSelection)
         {
             1 {Write-Warning "You may need to configure cluster manually!"}
             Default {Configure-AzsHciCluster -ClusterName hci01 -Verbose} 
         }
 
-        switch ($AksHciConfigurationProfile)
+        switch ($AksHciConfigurationProfileSelection)
         {
             1 {Write-Warning "You may need to prepare Azure Stack HCI cluster for Aks Hci pre-requisites manually!"}
             Default {Prepare-AzsHciClusterforAksHciDeployment -Verbose} 
