@@ -36,47 +36,53 @@ function Cleanup-VMs
             $AzureStackHCIHosts = Get-VM "hpv*"
             $ouName = $AzureStackHCIClusterName
             $servers = $AzureStackHCIHosts.Name + $AzureStackHCIClusterName
+            
+            if ($AzureStackHCIHosts)
+            {
+                Write-Verbose "[Cleanup-VMs]: Removing Azure Stack HCI hosts, cluster and related DHCP, DNS records and computer accounts"
+                #remove Azure Stack HCI hosts
+                $AzureStackHCIHosts | Stop-VM -TurnOff -Passthru | Remove-VM -Force
+                Remove-Item -Path $AzureStackHCIHosts.ConfigurationLocation -Recurse -Force
 
-            Write-Verbose "[Cleanup-VMs]: Removing Azure Stack HCI hosts, cluster and related DHCP, DNS records and computer accounts"
-            #remove Azure Stack HCI hosts
-            $AzureStackHCIHosts | Stop-VM -TurnOff -Passthru | Remove-VM -Force
-            Remove-Item -Path $AzureStackHCIHosts.ConfigurationLocation -Recurse -Force
-
-            #remove Azure Stack HCI hosts DNS records, DHCP leases and Disable Computer Accounts
-            Write-Verbose "[Cleanup-VMs]: Removing Dns Records for $($AzureStackHCIHosts.Name + "." + "$domainname")"
-            $AzureStackHCIHosts.Name | ForEach-Object {Get-DnsServerResourceRecord -ZoneName $domainName -Name $_ -ErrorAction SilentlyContinue | Remove-DnsServerResourceRecord -ZoneName $domainName -Force}
+                #remove Azure Stack HCI hosts DNS records, DHCP leases and Disable Computer Accounts
+                Write-Verbose "[Cleanup-VMs]: Removing Dns Records for $($AzureStackHCIHosts.Name + "." + "$domainname")"
+                $AzureStackHCIHosts.Name | ForEach-Object {Get-DnsServerResourceRecord -ZoneName $domainName -Name $_ -ErrorAction SilentlyContinue | Remove-DnsServerResourceRecord -ZoneName $domainName -Force}
             
-            Write-Verbose "[Cleanup-VMs]: Removing Dhcp lease for $($AzureStackHCIHosts.Name)"
-            $AzureStackHCIHosts.Name | ForEach-Object {Get-DhcpServerv4Lease -ScopeId $dhcpScopeString -ErrorAction SilentlyContinue | Where-Object hostname -like $_* | Remove-DhcpServerv4Lease}
+                Write-Verbose "[Cleanup-VMs]: Removing Dhcp lease for $($AzureStackHCIHosts.Name)"
+                $AzureStackHCIHosts.Name | ForEach-Object {Get-DhcpServerv4Lease -ScopeId $dhcpScopeString -ErrorAction SilentlyContinue | Where-Object hostname -like $_* | Remove-DhcpServerv4Lease}
             
-            Write-Verbose "[Cleanup-VMs]: Removing Dns Records for $($AzureStackHCIClusterName + "." + "$domainname")"
-            $AzureStackHCIClusterName | ForEach-Object {Get-DnsServerResourceRecord -ZoneName $domainName -Name $_ -ErrorAction SilentlyContinue | Remove-DnsServerResourceRecord -ZoneName $domainName -Force}
+                Write-Verbose "[Cleanup-VMs]: Removing Dns Records for $($AzureStackHCIClusterName + "." + "$domainname")"
+                $AzureStackHCIClusterName | ForEach-Object {Get-DnsServerResourceRecord -ZoneName $domainName -Name $_ -ErrorAction SilentlyContinue | Remove-DnsServerResourceRecord -ZoneName $domainName -Force}
             
-            Write-Verbose "[Cleanup-VMs]: Removing Dhcp lease for $AzureStackHCIClusterName"
-            $AzureStackHCIClusterName | ForEach-Object {Get-DhcpServerv4Lease -ScopeId $dhcpScopeString -ErrorAction SilentlyContinue | Where-Object hostname -like $_* | Remove-DhcpServerv4Lease}
+                Write-Verbose "[Cleanup-VMs]: Removing Dhcp lease for $AzureStackHCIClusterName"
+                $AzureStackHCIClusterName | ForEach-Object {Get-DhcpServerv4Lease -ScopeId $dhcpScopeString -ErrorAction SilentlyContinue | Where-Object hostname -like $_* | Remove-DhcpServerv4Lease}
             
-            Write-Verbose "[Cleanup-VMs]: Removing AD Computer for $servers"
-            $servers | Get-ADComputer -ErrorAction SilentlyContinue | Remove-ADObject -Recursive -Confirm:$false
+                Write-Verbose "[Cleanup-VMs]: Removing AD Computer for $servers"
+                $servers | Get-ADComputer -ErrorAction SilentlyContinue | Remove-ADObject -Recursive -Confirm:$false
             
-            Write-Verbose "[Cleanup-VMs]: Removing the OU: $ouName"
-            Get-ADOrganizationalUnit -Filter * | where-object name -eq $ouName | Set-ADOrganizationalUnit -ProtectedFromAccidentalDeletion $false -PassThru | Remove-ADOrganizationalUnit -Recursive -Confirm:$false
+                Write-Verbose "[Cleanup-VMs]: Removing the OU: $ouName"
+                Get-ADOrganizationalUnit -Filter * | where-object name -eq $ouName | Set-ADOrganizationalUnit -ProtectedFromAccidentalDeletion $false -PassThru | Remove-ADOrganizationalUnit -Recursive -Confirm:$false
+            }
         }
 
         if ($WindowsAdminCenterVM)
         {
             $wac = Get-VM wac
-            Write-Verbose "[Cleanup-VMs]: Removing Windows Center VM and related DHCP, DNS records and computer account"
-            #remove Windows Admin Center host
-            $wac | Stop-VM -TurnOff -Passthru | Remove-VM -Force
-            Remove-Item -Path $wac.ConfigurationLocation -Recurse -Force
+            if ($wac)
+            {
+                Write-Verbose "[Cleanup-VMs]: Removing Windows Center VM and related DHCP, DNS records and computer account"
+                #remove Windows Admin Center host
+                $wac | Stop-VM -TurnOff -Passthru | Remove-VM -Force
+                Remove-Item -Path $wac.ConfigurationLocation -Recurse -Force
             
-            #remove Windows Admin Center host DNS record, DHCP lease
-            Write-Verbose "[Cleanup-VMs]: Removing Dns Records for $($wac.Name + "." + "$domainname")"
-            Get-DnsServerResourceRecord -ZoneName $domainName -Name $wac.Name -ErrorAction SilentlyContinue | Remove-DnsServerResourceRecord -ZoneName $domainName -Force
-            Write-Verbose "[Cleanup-VMs]: Removing Dhcp lease for $($wac.Name)"
-            Get-DhcpServerv4Lease -ScopeId $dhcpScopeString -ErrorAction SilentlyContinue | Where-Object hostname -like $wac.Name | Remove-DhcpServerv4Lease
-            Write-Verbose "[Cleanup-VMs]: Removing AD Computer for $($wac.Name)"
-            $wac.name | Get-ADComputer | Remove-ADObject -Recursive -Confirm:$false
+                #remove Windows Admin Center host DNS record, DHCP lease
+                Write-Verbose "[Cleanup-VMs]: Removing Dns Records for $($wac.Name + "." + "$domainname")"
+                Get-DnsServerResourceRecord -ZoneName $domainName -Name $wac.Name -ErrorAction SilentlyContinue | Remove-DnsServerResourceRecord -ZoneName $domainName -Force
+                Write-Verbose "[Cleanup-VMs]: Removing Dhcp lease for $($wac.Name)"
+                Get-DhcpServerv4Lease -ScopeId $dhcpScopeString -ErrorAction SilentlyContinue | Where-Object hostname -like $wac.Name | Remove-DhcpServerv4Lease
+                Write-Verbose "[Cleanup-VMs]: Removing AD Computer for $($wac.Name)"
+                $wac.name | Get-ADComputer | Remove-ADObject -Recursive -Confirm:$false
+            }
         }
 
         if ($RemoveAllSourceFiles) {
@@ -137,16 +143,19 @@ function Prepare-AdforAzsHciDeployment
         }
 
         #Creates Azure Stack HCI hosts if not exist
-        $AzureStackHCIHosts.Name | ForEach-Object {
-            $comp = Get-ADComputer -Filter * | Where-Object name -eq $_
-            if (-not ($comp))
-            {
-                New-ADComputer -Name $_ -Enabled $false -Path $dn -PrincipalsAllowedToDelegateToAccount $wacObject
-            }
-            else
-            {
-                $comp | Set-ADComputer -PrincipalsAllowedToDelegateToAccount $wacObject
-                $comp | Move-AdObject -TargetPath $dn
+        if ($AzureStackHCIHosts.Name)
+        {
+            $AzureStackHCIHosts.Name | ForEach-Object {
+                $comp = Get-ADComputer -Filter * | Where-Object name -eq $_
+                if (-not ($comp))
+                {
+                    New-ADComputer -Name $_ -Enabled $false -Path $dn -PrincipalsAllowedToDelegateToAccount $wacObject
+                }
+                else
+                {
+                    $comp | Set-ADComputer -PrincipalsAllowedToDelegateToAccount $wacObject
+                    $comp | Move-AdObject -TargetPath $dn
+                }
             }
         }
 
