@@ -1,6 +1,6 @@
 #https://docs.microsoft.com/en-us/azure-stack/aks-hci/setup-powershell
 
-#run following code from any Azure Stack HCI host
+#run following code from one of Azure Stack HCI Cluster node (Logon using Domain Credentials)
 
 #Enable AksHCI
 $azSHCICSV = "AksHCIMain"
