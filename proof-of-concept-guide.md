@@ -49,7 +49,16 @@ ise V:\source\branchData\AzureStackHCIonAzure-$branch\scripts\Deploy-AksHCIWorke
 
 ### Deploy Azure Stack HCI using PowerShell and prepare cluster for Aks Hci deployment
 
-As mentioned earlier Azure Stack HCI deployment is highly simplified into a wizard. To run wizard run following PowerShell or switch to Deploy-AzsHciCluster.ps1 script in the ISE. Following cmdlet will guide you through the steps required to be completed for Azure Stack HCI cluster deployment and preparation for Aks Hci deployment.
+As mentioned earlier Azure Stack HCI deployment is simplified into a wizard with the provided modules in the repository for the sake of abstraction to run PoC. Run following PowerShell cmdlet or switch to **Deploy-AzsHciCluster.ps1** script tab in the ISE. Once run following cmdlet will guide you through the steps required to complete for Azure Stack HCI cluster deployment and preparation for Aks Hci deployment.
+
+Following set of topics will be prompted. (During the first run default option can be used, by pressing Enter or selecting zero)
+
+* Cleanup VMs options (optional for first time)
+* Install roles and features options
+* Azure Stack HCI network configuration options
+* Disk clean up options (optional for first time)
+* Cluster setup options
+* Prepare Azure Stack HCI VMs for Aks Hci pre-requsites
 
 ```powershell
 
