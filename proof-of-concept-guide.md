@@ -35,7 +35,7 @@ Following simple steps are required before starting any Demo on Aks Hci environm
 
 ### Using scripts in the repository
 
-During the provisioning process of the Azure VM branch files have been downloaded to V:\Source folder. Logon to the Azure VM and open Powershell ISE copy the following code as new script and run. The following code will extract github repository files downloaded earlier and open up all required PowerShell scripts in PowerShell ISE window.
+During the provisioning process of the Azure VM repository is getting downloaded to V:\Source folder. Logon to the Azure VM and open Powershell ISE copy the following code as new script and run. The following code will extract github repository and open up all required PowerShell scripts in PowerShell ISE window.
 
 ```powershell
 
