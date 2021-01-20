@@ -46,7 +46,7 @@
 
         [string]$vSwitchNameMgmt = "Management",
 
-        [string]$vSwitchNameConverged = "ConvergedSW",
+        [string]$vSwitchNameConverged = "Default Switch",
 
         [string]$HCIvmPrefix = "hpv",
 
