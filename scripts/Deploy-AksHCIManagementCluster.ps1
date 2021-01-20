@@ -10,7 +10,9 @@ Initialize-AksHciNode
 
 #Deploy Management Cluster
 Set-AksHciConfig -imageDir "$azSHCICSVPath\Images" -cloudConfigLocation "$azSHCICSVPath\Config" `
-    -vnetName ConvergedSwitch -controlPlaneVmSize Default -loadBalancerVmSize Default
+    -workingDir "$azSHCICSVPath\Working" -vnetName 'Default Switch' -controlPlaneVmSize Default `
+    -loadBalancerVmSize Default -vnetType ICS 
+
 Install-AksHci
 
 #Retreive AksHCI logs for Management Cluster deployment
