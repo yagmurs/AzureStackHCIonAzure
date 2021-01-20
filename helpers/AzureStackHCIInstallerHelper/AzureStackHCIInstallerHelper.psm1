@@ -129,18 +129,29 @@ function Prepare-AzsHciPackage
         #create source folder for AKS bits
         New-Item -Path $aksSource -ItemType Directory -Force
 
-        #Download AKS on Azure Stack HCI tools
-        Start-BitsTransfer -Source https://aka.ms/aks-hci-download -Destination "$aksSource\aks-hci-tools.zip" -Confirm:$false
-
+        #Download AKS on Azure Stack HCI tools if no exist
+        if (-not (Test-Path -Path "$aksSource\aks-hci-tools.zip" -ErrorAction SilentlyContinue))
+        {
+            Write-Verbose "[Prepare-AzsHciPackage]: Downloading AKS on Azure Stack HCI tools from https://aka.ms/aks-hci-download"
+            Start-BitsTransfer -Source https://aka.ms/aks-hci-download -Destination "$aksSource\aks-hci-tools.zip" -Confirm:$false
+        }
+        
         #unblock download file
         Unblock-File -Path "$aksSource\aks-hci-tools.zip"
 
-        #Unzip download file
-        Expand-Archive -Path "$aksSource\aks-hci-tools.zip" -DestinationPath "$aksSource\aks-hci-tools" -Force
+        #Unzip download file if not unzipped
+        if (-not (Test-Path -Path "$aksSource\aks-hci-tools" -ErrorAction SilentlyContinue))
+        {
+            Write-Verbose "[Prepare-AzsHciPackage]: Unzip downloaded file: aks-hci-tools.zip"
+            Expand-Archive -Path "$aksSource\aks-hci-tools.zip" -DestinationPath "$aksSource\aks-hci-tools" -Force
+        }
 
-        #Unzip Powershell modules
-        Expand-Archive -Path "$aksSource\aks-hci-tools\AksHci.Powershell.zip" -DestinationPath "$aksSource\aks-hci-tools\Powershell\Modules" -Force
-
+        #Unzip Powershell modules if not unzipped
+        if (-not (Test-Path -Path "$aksSource\aks-hci-tools\Powershell\Modules" -ErrorAction SilentlyContinue))
+        {
+            Write-Verbose "[Prepare-AzsHciPackage]: Unzip Aks Hci PowerShell module"
+            Expand-Archive -Path "$aksSource\aks-hci-tools\AksHci.Powershell.zip" -DestinationPath "$aksSource\aks-hci-tools\Powershell\Modules" -Force
+        }
     }
     End
     {
@@ -166,6 +177,11 @@ function Prepare-AzureVMforAksHciDeployment
     Process
     {
         Prepare-AzsHciPackage
+
+        #Copy AksHCI modules to Azure Stack HCI hosts
+        $AzureStackHCIHosts.Name | ForEach-Object {Copy-Item "$aksSource\aks-hci-tools\Powershell\Modules" "c:\Program Files\WindowsPowershell\" -Recurse -Force}
+
+        New-Item -Path $aksHCITargetPath -ItemType Directory -Force
     }
     
     End
@@ -760,37 +776,6 @@ function Prepare-AzsHciClusterforAksHciDeployment
 function Start-AksHciPoC
 {
     param (
-
-        [Parameter(Mandatory=$false)]
-        [ValidateSet($null,0,1,2,3)]
-        [int]
-        $CleanupVMs,
-
-        [Parameter(Mandatory=$false)]
-        [int]
-        [ValidateSet($null,0,1)]
-        $RolesConfigurationProfile,
-
-        [Parameter(Mandatory=$false)]
-        [int]
-        [ValidateSet($null,0,1,2,3,4,5,6,7,8,9)]
-        $NetworkConfigurationProfile,
-
-        [Parameter(Mandatory=$false)]
-        [int]
-        [ValidateSet($null,0,1)]
-        $DisksConfigurationProfile,
-
-        [Parameter(Mandatory=$false)]
-        [int]
-        [ValidateSet($null,0,1)]
-        $ClusterConfigurationProfile,
-
-        [Parameter(Mandatory=$false)]
-        [int]
-        [ValidateSet($null,0,1)]
-        $AksHciConfigurationProfile
-
     )
 
     begin
@@ -798,7 +783,6 @@ function Start-AksHciPoC
 
         #Initialize variables
         $AzureStackHCIHosts = Get-VM -Name hpv*
-        $cimSession = New-CimSession -ComputerName $AzureStackHCIHosts.name
         $sleep = 20
 
     }
@@ -806,177 +790,80 @@ function Start-AksHciPoC
     process
     {
 
-        if ($CleanupVMs)
+        $AzureVMAksHciProfileSelection = Show-Menu -Items @(
+            'Yes, prepare Azure VM for Aks Hci deployment',
+            'I will deploy Azure Stack HCI'
+        ) -Title 'Azure VM Aks Hci preparation options' -Description 'If you select this option Azure VM be prepared for Aks Hci Deployment'
+
+        if ($AzureVMAksHciProfileSelection -eq 0)
         {
-            $CleanupVMsSelection = $CleanupVMs
+            Cleanup-VMs -AzureStackHciHostVMs -WindowsAdminCenterVM -DoNotRedeploy -Verbose; Uninstall-AksHci
+            Prepare-AzureVMforAksHciDeployment
+            break
         }
-        else
-        {
-            $CleanupVMsSelection = Read-Host  @"
-
-    ============================================================================================
-
-    Cleanup VMs option to start from scratch?
-        This option will destroy All VMs or selected VMs.
         
-        0. Do NOT Cleanup ( !!Default selection!! )
-        1. Yes, Cleanup all HCI and Wac VMs
-        2. Yes, Cleanup Windows Admin Center Only!
-        3. Yes, Cleanup Azure Stack HCI Hosts Only!
-        4. Yes, Cleanup All VMs for both HCI host VMs, Wac and Aks Hci VMs!
-    ============================================================================================
+        $CleanupVMsSelection = Show-Menu -Items @(
+            'Do NOT Cleanup ( !!Default selection!! )',
+            'Yes, Cleanup all HCI and Wac VMs',
+            'Yes, Cleanup Windows Admin Center Only!',
+            'Yes, Cleanup Azure Stack HCI Hosts Only!',
+            'Yes, Cleanup All VMs for both HCI host VMs, Wac and Aks Hci VMs!'
+        ) -Title 'Cleanup VMs option to start from scratch?' -Description 'This option will destroy All VMs or selected VMs.'
 
-    Select
-"@
-        }
-
-        if ($RolesConfigurationProfile)
-        {
-            $RolesConfigurationProfileSelection = $RolesConfigurationProfile
-        }
-        else
-        {
-            $RolesConfigurationProfileSelection = Read-Host  @"
-
-    ============================================================================================
-
-    Azure Stack HCI Roles and Features Installation options
-        Roles are installed by default. (Optional)
-        
-        0. Do NOT install any Roles ( !!Default selection!! )
-        1. Install required roles to Azure Stack HCI Hosts
         
 
-    ============================================================================================
+        $RolesConfigurationProfileSelection = Show-Menu -Items @(
+            'Do NOT install any Roles ( !!Default selection!! )',
+            'Install required roles to Azure Stack HCI Hosts'
+        ) -Title 'Azure Stack HCI Roles and Features Installation optionssndklajsdkljasdjasjdljasd' -Description 'Roles are installed by default. (Optional)'
+                    
+        $NetworkConfigurationProfileSelection = Show-Menu -Items @(
+            'High-available Management & One Virtual Switch for All Traffic ( !!Default selection!! )',
+            'High-available networks for Management & One Virtual Switch for Compute Only',
+            'High-available networks for Managament & Two Virtual Switches',
+            'Single Network Adapter for Management & One Virtual Switch for All Traffic',
+            'Single Network Adapter for Management & One Virtual Switch for Compute Only',
+            'Single Network Adapter for Management & Two Virtual Switches for Compute and Storage',
+            'High-available networks for Management & One Virtual Switch for All Traffic ( !!Also reset network config!! )',
+            'Single Network Adapter for Management & One Virtual Switch for Compute Only ( !!Also reset network config!! )',
+            'High-available networks for Managament & Two Virtual Switches ( !!Also reset network config!! )',
+            'Do NOT configure networks'
+        ) -Title 'Azure Stack HCI Network Adapter Configuration options (SET Switch)' -Description ""
 
-    Select
-"@
-        }
+        $DisksConfigurationProfileSelection = Show-Menu -Items @(
+            'Do NOT erase and cleanup ( !!Default selection!! )',
+            'Erase all drives'
+        ) -Title 'Azure Stack HCI Disks cleanup options' -Description 'Please do so, if this is NOT first installation on top of clean environment. (Optional)'
 
-        if ($NetworkConfigurationProfile)
-        {
-            $NetworkConfigurationProfileSelection = $NetworkConfigurationProfile
-        }
-        else
-        {
-            $NetworkConfigurationProfileSelection = Read-Host  @"
-
-    ============================================================================================
-
-    Azure Stack HCI Network Adapter Configuration options (SET Switch)
+        $ClusterConfigurationProfileSelection = Show-Menu -Items @(
+            'Enable Cluster using default Name (Cluster Name: hci01) ( !!Default selection!! )',
+            'Do NOT Create Cluster yet.'
+        ) -Title 'Azure Stack HCI Cluster options' -Description 'Install cluster using default name to prevent any misconfigurations'
         
-        0. High-available Management & One Virtual Switch for All Traffic ( !!Default selection!! )
-        1. High-available networks for Management & One Virtual Switch for Compute Only
-        2. High-available networks for Managament & Two Virtual Switches
-        3. Single Network Adapter for Management & One Virtual Switch for All Traffic
-        4. Single Network Adapter for Management & One Virtual Switch for Compute Only
-        5. Single Network Adapter for Management & Two Virtual Switches for Compute and Storage
-        
-    Includes reseting Current config (recommended if redeploying)
-        
-        6. High-available networks for Management & One Virtual Switch for All Traffic
-        7. Single Network Adapter for Management & One Virtual Switch for Compute Only
-        8. High-available networks for Managament & Two Virtual Switches
-        9. Do NOT configure networks
- 
+        $AksHciConfigurationProfileSelection = Show-Menu -Items @(
+            'Prepare for Aks Hci Deployment ( !!Default selection!! )',
+            'Do NOT Prepare for Aks Hci Deployment yet.'
+        ) -Title 'Azure Stack HCI Cluster Aks Hci preparation options' -Description 'Prepare Azure Stack HCI Cluster with Aks Hci pre-requisites'
 
-    ============================================================================================
-        
-    Select
-"@
-        }
-
-        if ($DisksConfigurationProfile)
-        {
-            $DisksConfigurationProfileSelection = $DisksConfigurationProfile
-        }
-        else
-        {
-            $DisksConfigurationProfileSelection = Read-Host  @"
-
-    ============================================================================================
-
-    Azure Stack HCI Disks cleanup options
-        Please do so, if this is NOT first installation on top of clean environment. (Optional)
-        
-        0. Do NOT erase and cleanup ( !!Default selection!! )
-        1. Erase all drives
-
-    ============================================================================================
-
-    Select
-"@
-        
-        }
-
-        if ($ClusterConfigurationProfile)
-        {
-            $ClusterConfigurationProfileSelection = $ClusterConfigurationProfile
-        }
-        else
-        {
-            $ClusterConfigurationProfileSelection = Read-Host  @"
-
-    ============================================================================================
-
-    Azure Stack HCI Cluster options
-        Install cluster using default name to prevent any misconfigurations
-        
-        0. Enable Cluster using default Name (Cluster Name: hci01) ( !!Default selection!! )
-        1. Do NOT Create Cluster yet.   
-
-    ============================================================================================
-
-    Select
-"@
-
-        }
-
-        if ($AksHciConfigurationProfile)
-        {
-            $AksHciConfigurationProfileSelection = $AksHciConfigurationProfile
-        }
-        else 
-        {
-            $AksHciConfigurationProfileSelection = Read-Host  @"
-
-    ============================================================================================
-
-    Azure Stack HCI Cluster AKS HCI preparation options
-        Prepare Azure Stack HCI Cluster with Aks Hci pre-requisites
-        
-        0. Prepare for Aks Hci Deployment ( !!Default selection!! )
-        1. Do NOT Prepare for Aks Hci Deployment yet. 
-
-    ============================================================================================
-
-    Select
-"@
-
-        }
-    }
-
-    end
-    {
-
+    
         switch ($CleanupVMsSelection)
         {
             1 {Cleanup-VMs -AzureStackHciHostVMs -WindowsAdminCenterVM -Verbose}
             2 {Cleanup-VMs -WindowsAdminCenterVM -Verbose}
             3 {Cleanup-VMs -AzureStackHciHostVMs -Verbose}
-            4 {Uninstall-AksHci}
+            4 {Cleanup-VMs -AzureStackHciHostVMs -WindowsAdminCenterVM -Verbose; if ((Get-Vm *).count -gt 0){Uninstall-AksHci}}
             Default {Write-Warning "[Cleanup-VMs]: No Cleanup selected."} 
         }
         
-        switch ($PrepareAzureVMforAksHci)
+        switch ($AzureVMAksHciProfileSelection)
         {
-            1 {Cleanup-VMs -AzureStackHciHostVMs -WindowsAdminCenterVM -Verbose}
-            2 {Cleanup-VMs -WindowsAdminCenterVM -Verbose}
-            3 {Cleanup-VMs -AzureStackHciHostVMs -Verbose}
-            Default {Write-Warning "[Cleanup-VMs]: No Cleanup selected."} 
+            1 {}
+            default {Prepare-AzureVMforAksHciDeployment}
         }
 
         Prepare-AdforAzsHciDeployment
+
+        $cimSession = New-CimSession -ComputerName $AzureStackHCIHosts.name
 
         do
         {
@@ -1024,6 +911,14 @@ function Start-AksHciPoC
             Default {Prepare-AzsHciClusterforAksHciDeployment -Verbose} 
         }
 
+    }
+
+    end
+    {
+
+        Remove-CimSession $cimSession
+        Remove-variable cimsession
+
     }    
 }
 
@@ -1033,9 +928,11 @@ function Show-Menu
     [OutputType([string])]
     Param
     (
+        [parameter(Mandatory=$true)]
         [string[]]
         $Items,
 
+        [parameter(Mandatory=$true)]
         [string]
         $Title,
 
@@ -1049,16 +946,25 @@ function Show-Menu
 
     Begin
     {
+        $titleLength = [math]::Round($Title.Length / 2)
         $longest = [math]::Round(($items | ForEach-Object {$_.length} | Sort-Object -Descending | Select-Object -First 1) / 2)
+        if ($longest -lt $titleLength)
+        {
+            $longest = $titleLength
+        }
+        
     }
     Process
     {
         Clear-Host
-        Write-Host $('=' * $($longest + $MenuIndent) + " " + "$Title" + " " + '=' * $($longest + $MenuIndent)) -ForegroundColor Green
+        Write-Host $('=' * $(($longest + $MenuIndent) - $titleLength) + " " + "$Title" + " " + '=' * $(($longest + $MenuIndent) - $titleLength) ) -ForegroundColor Green
         Write-Host ""
         
-        Write-Host $(" " * $($MenuIndent - 2) + $Description) -ForegroundColor Yellow
-        Write-Host ""
+        if ($Description)
+        {
+            Write-Host $(" " * $($MenuIndent - 2) + $Description) -ForegroundColor Yellow
+            Write-Host ""
+        }
 
         for ($i = 0; $i -lt $items.count; $i++)
         { 
