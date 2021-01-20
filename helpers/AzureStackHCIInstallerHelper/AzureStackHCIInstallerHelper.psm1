@@ -110,6 +110,69 @@ function Cleanup-VMs
     }
 }
 
+function Prepare-AzsHciPackage
+{
+    [CmdletBinding()]
+    Param
+    (
+    )
+
+    Begin
+    {
+        #variables
+        $targetDrive = "V:"
+        $sourcePath =  "$targetDrive\source"
+        $aksSource = "$sourcePath\aksHciSource"
+    }
+    Process
+    {
+        #create source folder for AKS bits
+        New-Item -Path $aksSource -ItemType Directory -Force
+
+        #Download AKS on Azure Stack HCI tools
+        Start-BitsTransfer -Source https://aka.ms/aks-hci-download -Destination "$aksSource\aks-hci-tools.zip" -Confirm:$false
+
+        #unblock download file
+        Unblock-File -Path "$aksSource\aks-hci-tools.zip"
+
+        #Unzip download file
+        Expand-Archive -Path "$aksSource\aks-hci-tools.zip" -DestinationPath "$aksSource\aks-hci-tools" -Force
+
+        #Unzip Powershell modules
+        Expand-Archive -Path "$aksSource\aks-hci-tools\AksHci.Powershell.zip" -DestinationPath "$aksSource\aks-hci-tools\Powershell\Modules" -Force
+
+    }
+    End
+    {
+    }
+}
+
+function Prepare-AzureVMforAksHciDeployment
+{
+    [CmdletBinding()]
+    Param
+    (
+    )
+
+    Begin
+    {
+                #variables
+                $targetDrive = "V:"
+                $sourcePath =  "$targetDrive\source"
+                $aksSource = "$sourcePath\aksHciSource"
+                $aksHCITargetPath = "$targetDrive\AksHciMain"
+    }
+
+    Process
+    {
+        Prepare-AzsHciPackage
+    }
+    
+    End
+    {
+    }
+}
+
 function Prepare-AdforAzsHciDeployment
 {
     [CmdletBinding()]
@@ -671,20 +734,7 @@ function Prepare-AzsHciClusterforAksHciDeployment
     }
     Process
     {
-        #create source folder for AKS bits
-        New-Item -Path $aksSource -ItemType Directory -Force
-
-        #Download AKS on Azure Stack HCI tools
-        Start-BitsTransfer -Source https://aka.ms/aks-hci-download -Destination "$aksSource\aks-hci-tools.zip"
-
-        #unblock download file
-        Unblock-File -Path "$aksSource\aks-hci-tools.zip"
-
-        #Unzip download file
-        Expand-Archive -Path "$aksSource\aks-hci-tools.zip" -DestinationPath "$aksSource\aks-hci-tools" -Force
-
-        #Unzip Powershell modules
-        Expand-Archive -Path "$aksSource\aks-hci-tools\AksHci.Powershell.zip" -DestinationPath "$aksSource\aks-hci-tools\Powershell\Modules" -Force
+        Prepare-AzsHciPackage
 
         #Update NuGet Package provider on AzsHci Host
         Invoke-Command -ComputerName $AzureStackHCIHosts.Name -ScriptBlock {
@@ -707,7 +757,7 @@ function Prepare-AzsHciClusterforAksHciDeployment
     }
 }
 
-function Start-AzureStackHciSetup
+function Start-AksHciPoC
 {
     param (
 
@@ -770,10 +820,10 @@ function Start-AzureStackHciSetup
         This option will destroy All VMs or selected VMs.
         
         0. Do NOT Cleanup ( !!Default selection!! )
-        1. Yes, Cleanup all VMs
+        1. Yes, Cleanup all HCI and Wac VMs
         2. Yes, Cleanup Windows Admin Center Only!
         3. Yes, Cleanup Azure Stack HCI Hosts Only!
-        
+        4. Yes, Cleanup All VMs for both HCI host VMs, Wac and Aks Hci VMs!
     ============================================================================================
 
     Select
@@ -914,6 +964,15 @@ function Start-AzureStackHciSetup
             1 {Cleanup-VMs -AzureStackHciHostVMs -WindowsAdminCenterVM -Verbose}
             2 {Cleanup-VMs -WindowsAdminCenterVM -Verbose}
             3 {Cleanup-VMs -AzureStackHciHostVMs -Verbose}
+            4 {Uninstall-AksHci}
+            Default {Write-Warning "[Cleanup-VMs]: No Cleanup selected."} 
+        }
+        
+        switch ($PrepareAzureVMforAksHci)
+        {
+            1 {Cleanup-VMs -AzureStackHciHostVMs -WindowsAdminCenterVM -Verbose}
+            2 {Cleanup-VMs -WindowsAdminCenterVM -Verbose}
+            3 {Cleanup-VMs -AzureStackHciHostVMs -Verbose}
             Default {Write-Warning "[Cleanup-VMs]: No Cleanup selected."} 
         }
 
@@ -966,4 +1025,59 @@ function Start-AzureStackHciSetup
         }
 
     }    
+}
+
+function Show-Menu
+{
+    [CmdletBinding()]
+    [OutputType([string])]
+    Param
+    (
+        [string[]]
+        $Items,
+
+        [string]
+        $Title,
+
+        [string]
+        $Description,
+
+        [int]
+        [ValidateRange(4,10)]
+        $MenuIndent = 4
+    )
+
+    Begin
+    {
+        $longest = [math]::Round(($items | ForEach-Object {$_.length} | Sort-Object -Descending | Select-Object -First 1) / 2)
+    }
+    Process
+    {
+        Clear-Host
+        Write-Host $('=' * $($longest + $MenuIndent) + " " + "$Title" + " " + '=' * $($longest + $MenuIndent)) -ForegroundColor Green
+        Write-Host ""
+        
+        Write-Host $(" " * $($MenuIndent - 2) + $Description) -ForegroundColor Yellow
+        Write-Host ""
+
+        for ($i = 0; $i -lt $items.count; $i++)
+        { 
+            Write-Host "$(" " * $MenuIndent + "$i" + '. ' + $items[$i])"
+        }
+        
+        Write-Host ""
+        Write-Host "Selection: " -ForegroundColor Green -NoNewline
+        
+        $selection = Read-Host
+        
+        if ([string]::IsNullOrEmpty($selection))
+        {
+            $selection = 0
+        }
+        return $selection
+    }
+    End
+    {
+
+    }
 }

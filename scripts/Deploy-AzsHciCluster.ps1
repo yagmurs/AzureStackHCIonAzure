@@ -1,13 +1,13 @@
 Import-Module AzureStackHCIInstallerHelper
 
 #run interactive
-Start-AzureStackHciSetup
+Start-AksHciPoC
 
 break
 
 #cleanup VMs and rerun setup unattended
 #Hint: run above interactive command to understand Configuration profile input parameters.
-Start-AzureStackHciSetup -CleanupVMs 1 `
+Start-AksHciPoC -CleanupVMs 1 `
     -RolesConfigurationProfile 0 `
     -NetworkConfigurationProfile 0 `
     -DisksConfigurationProfile 0 `
@@ -20,7 +20,7 @@ break
 Cleanup-Vms -RemoveAllSourceFiles
 
 #rerun setup unattended
-Start-AzureStackHciSetup -RolesConfigurationProfile 0 `
+Start-AksHciPoC -RolesConfigurationProfile 0 `
     -NetworkConfigurationProfile 0 `
     -DisksConfigurationProfile 0 `
     -ClusterConfigurationProfile 0 `
