@@ -54,7 +54,9 @@
 
         [int]$azsHCIHostMemory,
 
-        [string]$branch = "master"
+        [string]$branch = "master",
+
+        [string]$aksHciScenario
     ) 
     
     Import-DscResource -ModuleName 'xActiveDirectory'
@@ -187,42 +189,14 @@
             DependsOn = "[File]source"
         }
 
-        script "Download DSC Config for $wacVMName"
+        archive "Extract branch files"
         {
-            GetScript = {
-                $result = Test-Path -Path "$using:sourcePath\Install-WacUsingChoco.ps1"
-                return @{ 'Result' = $result }
-            }
-
-            SetScript = {
-                Start-BitsTransfer -Source "$using:wacMofUri" -Destination "$using:sourcePath\Install-WacUsingChoco.ps1"          
-            }
-
-            TestScript = {
-                # Create and invoke a scriptblock using the $GetScript automatic variable, which contains a string representation of the GetScript.
-                $state = [scriptblock]::Create($GetScript).Invoke()
-                return $state.Result
-            }
-            DependsOn = "[File]source"
-        }
-
-        script "Download DSC Config for AzsHci Hosts"
-        {
-            GetScript = {
-                $result = Test-Path -Path "$using:sourcePath\Install-AzsRolesandFeatures.ps1"
-                return @{ 'Result' = $result }
-            }
-
-            SetScript = {
-                Start-BitsTransfer -Source "$using:aszhciHostsMofUri" -Destination "$using:sourcePath\Install-AzsRolesandFeatures.ps1"          
-            }
-
-            TestScript = {
-                # Create and invoke a scriptblock using the $GetScript automatic variable, which contains a string representation of the GetScript.
-                $state = [scriptblock]::Create($GetScript).Invoke()
-                return $state.Result
-            }
-            DependsOn = "[File]source"
+            Ensure = 'Present'
+            Path = "$using:sourcePath\$using:branch.zip"
+            Destination = "$using:sourcePath\branchData"
+            Validate = $true
+            Checksum = 'SHA-1'
+            DependsOn = "[script]Download branch files for $branch"
         }
 
         script "Download AzureStack HCI bits"
@@ -243,26 +217,7 @@
             }
             DependsOn = "[File]source"
         }
-<#
-        script "Download Windows Server 2019"
-        {
-            GetScript = {
-                $result = Test-Path -Path $using:ws2019IsoLocalPath
-                return @{ 'Result' = $result }
-            }
 
-            SetScript = {
-                Start-BitsTransfer -Source $using:ws2019IsoUri -Destination $using:ws2019IsoLocalPath            
-            }
-
-            TestScript = {
-                # Create and invoke a scriptblock using the $GetScript automatic variable, which contains a string representation of the GetScript.
-                $state = [scriptblock]::Create($GetScript).Invoke()
-                return $state.Result
-            }
-            DependsOn = "[File]source"
-        }
- #>
         WindowsFeature DNS 
         { 
             Ensure = "Present" 
@@ -571,159 +526,59 @@
             }
             DependsOn = "[file]VM-Base", "[script]Download AzureStack HCI bits"
         }
-<#
-        script "prepareVHDX ws2019"
+
+        if ($aksHciScenario -eq 'onNestedAzureStackHciClusteronAzureVM')
         {
-            GetScript = {
-                $result = Test-Path -Path $using:ws2019VhdPath
-                return @{ 'Result' = $result }
-            }
-
-            SetScript = {
-                Convert-Wim2Vhd -DiskLayout UEFI -SourcePath $using:ws2019IsoLocalPath -Path $using:ws2019VhdPath -Size 100GB -Dynamic -Index 1 -ErrorAction SilentlyContinue
-            }
-
-            TestScript = {
-                # Create and invoke a scriptblock using the $GetScript automatic variable, which contains a string representation of the GetScript.
-                $state = [scriptblock]::Create($GetScript).Invoke()
-                return $state.Result
-            }
-            DependsOn = "[file]VM-Base", "[script]Download Windows Server 2019"
-        }
- #>
-        for ($i = 1; $i -lt $azsHostCount + 1; $i++)
-        {
-            $suffix = '{0:D2}' -f $i
-            $vmname = $($HCIvmPrefix + $suffix)
-            $memory = $azsHCIHostMemory * 1gb
-
-            file "VM-Folder-$vmname"
+            for ($i = 1; $i -lt $azsHostCount + 1; $i++)
             {
-                Ensure = 'Present'
-                DestinationPath = "$targetVMPath\$vmname"
-                Type = 'Directory'
-                DependsOn = "[File]folder-vms"
-            }
-            
-            xVhd "NewOSDisk-$vmname"
-            {
-                Ensure           = 'Present'
-                Name             = "$vmname-OSDisk.vhdx"
-                Path             = "$targetVMPath\$vmname"
-                Generation       = 'vhdx'
-                ParentPath       = $azsHciVhdPath
-                Type             = 'Differencing'
-                DependsOn = "[xVMSwitch]$vSwitchNameMgmt", "[script]prepareVHDX", "[file]VM-Folder-$vmname"
-            }
+                $suffix = '{0:D2}' -f $i
+                $vmname = $($HCIvmPrefix + $suffix)
+                $memory = $azsHCIHostMemory * 1gb
 
-            xVMHyperV "VM-$vmname"
-            {
-                Ensure          = 'Present'
-                Name            = $vmname
-                VhdPath         = "$targetVMPath\$vmname\$vmname-OSDisk.vhdx"
-                Path            = $targetVMPath
-                Generation      = 2
-                StartupMemory   = $memory
-                ProcessorCount  = 4
-                DependsOn       = "[xVhd]NewOSDisk-$vmname"
-            }
-
-            xVMProcessor "Enable NestedVirtualization-$vmname"
-            {
-                VMName = $vmname
-                ExposeVirtualizationExtensions = $true
-                DependsOn = "[xVMHyperV]VM-$vmname"
-            }
-
-            script "remove default Network Adapter on VM-$vmname"
-            {
-                GetScript = {
-                    $VMNetworkAdapter = Get-VMNetworkAdapter -VMName $using:vmname -Name 'Network Adapter' -ErrorAction SilentlyContinue
-                    $result = if ($VMNetworkAdapter) {$false} else {$true}
-                    return @{
-                        VMName = $VMNetworkAdapter.VMName
-                        Name = $VMNetworkAdapter.Name
-                        Result = $result
-                    }
-                }
-    
-                SetScript = {
-                    $state = [scriptblock]::Create($GetScript).Invoke()
-                    Remove-VMNetworkAdapter -VMName $state.VMName -Name $state.Name                 
-                }
-    
-                TestScript = {
-                    # Create and invoke a scriptblock using the $GetScript automatic variable, which contains a string representation of the GetScript.
-                    $state = [scriptblock]::Create($GetScript).Invoke()
-                    return $state.Result
-                }
-                DependsOn = "[xVMHyperV]VM-$vmname"
-            }
-
-            for ($k = 1; $k -le 2; $k++)
-            {
-                $mgmtNicName = "$vmname-Management$k"
-                xVMNetworkAdapter "New Network Adapter $mgmtNicName $vmname DHCP"
+                file "VM-Folder-$vmname"
                 {
-                    Id = $mgmtNicName
-                    Name = $mgmtNicName
-                    SwitchName = $vSwitchNameMgmt
-                    VMName = $vmname
                     Ensure = 'Present'
-                    DependsOn = "[xVMHyperV]VM-$vmname"
-                }
-
-                cVMNetworkAdapterSettings "Enable $vmname $mgmtNicName Mac address spoofing and Teaming"
-                {
-                    Id = $mgmtNicName
-                    Name = $mgmtNicName
-                    SwitchName = $vSwitchNameMgmt
-                    VMName = $vmname
-                    AllowTeaming = 'on'
-                    MacAddressSpoofing = 'on'
-                    DependsOn = "[xVMNetworkAdapter]New Network Adapter $mgmtNicName $vmname DHCP"
-                }
-            }
-
-            for ($l = 1; $l -le 4; $l++) 
-            {
-                $ipAddress = $('192.168.25' + $l + '.1' + $suffix)
-                $nicName = "$vmname-Converged-Nic$l"
-
-                xVMNetworkAdapter "New Network Adapter Converged $vmname $nicName $ipAddress"
-                {
-                    Id = $nicName
-                    Name = $nicName
-                    SwitchName = $vSwitchNameConverged
-                    VMName = $vmname
-                    NetworkSetting = xNetworkSettings {
-                        IpAddress = $ipAddress
-                        Subnet = "255.255.255.0"
-                    }
-                    Ensure = 'Present'
-                    DependsOn = "[xVMHyperV]VM-$vmname"
+                    DestinationPath = "$targetVMPath\$vmname"
+                    Type = 'Directory'
+                    DependsOn = "[File]folder-vms"
                 }
                 
-                cVMNetworkAdapterSettings "Enable $vmname $nicName Mac address spoofing and Teaming"
+                xVhd "NewOSDisk-$vmname"
                 {
-                    Id = $nicName
-                    Name = $nicName
-                    SwitchName = $vSwitchNameConverged
-                    VMName = $vmname
-                    AllowTeaming = 'on'
-                    MacAddressSpoofing = 'on'
-                    DependsOn = "[xVMNetworkAdapter]New Network Adapter Converged $vmname $nicName $ipAddress"
+                    Ensure           = 'Present'
+                    Name             = "$vmname-OSDisk.vhdx"
+                    Path             = "$targetVMPath\$vmname"
+                    Generation       = 'vhdx'
+                    ParentPath       = $azsHciVhdPath
+                    Type             = 'Differencing'
+                    DependsOn = "[xVMSwitch]$vSwitchNameMgmt", "[script]prepareVHDX", "[file]VM-Folder-$vmname"
                 }
-            }    
 
-<#
-                script "Enable $vmname $nicName Mac address spoofing"
+                xVMHyperV "VM-$vmname"
+                {
+                    Ensure          = 'Present'
+                    Name            = $vmname
+                    VhdPath         = "$targetVMPath\$vmname\$vmname-OSDisk.vhdx"
+                    Path            = $targetVMPath
+                    Generation      = 2
+                    StartupMemory   = $memory
+                    ProcessorCount  = 4
+                    DependsOn       = "[xVhd]NewOSDisk-$vmname"
+                }
+
+                xVMProcessor "Enable NestedVirtualization-$vmname"
+                {
+                    VMName = $vmname
+                    ExposeVirtualizationExtensions = $true
+                    DependsOn = "[xVMHyperV]VM-$vmname"
+                }
+
+                script "remove default Network Adapter on VM-$vmname"
                 {
                     GetScript = {
-                        $VMNetworkAdapter = Get-VMNetworkAdapter -VMName $using:vmname -Name $using:nicName
-                        $result = if ($VMNetworkAdapter.MacAddressSpoofing -eq 'on') {$true} else {$false}
+                        $VMNetworkAdapter = Get-VMNetworkAdapter -VMName $using:vmname -Name 'Network Adapter' -ErrorAction SilentlyContinue
+                        $result = if ($VMNetworkAdapter) {$false} else {$true}
                         return @{
-                            MacAddressSpoofing = $VMNetworkAdapter.MacAddressSpoofing
                             VMName = $VMNetworkAdapter.VMName
                             Name = $VMNetworkAdapter.Name
                             Result = $result
@@ -732,7 +587,7 @@
         
                     SetScript = {
                         $state = [scriptblock]::Create($GetScript).Invoke()
-                        Set-VMNetworkAdapter -VMName $state.VMName -Name $state.Name -MacAddressSpoofing on                  
+                        Remove-VMNetworkAdapter -VMName $state.VMName -Name $state.Name                 
                     }
         
                     TestScript = {
@@ -740,83 +595,135 @@
                         $state = [scriptblock]::Create($GetScript).Invoke()
                         return $state.Result
                     }
-                    DependsOn = "[xVMNetworkAdapter]New Network Adapter Converged $vmname $nicName"
-                }
-            }
-#>
-
-            for ($j = 1; $j -lt $azsHostDataDiskCount + 1 ; $j++)
-            { 
-                xvhd "$vmname-DataDisk$j"
-                {
-                    Ensure           = 'Present'
-                    Name             = "$vmname-DataDisk$j.vhdx"
-                    Path             = "$targetVMPath\$vmname"
-                    Generation       = 'vhdx'
-                    Type             = 'Dynamic'
-                    MaximumSizeBytes = $dataDiskSize
-                    DependsOn        = "[xVMHyperV]VM-$vmname"
-                }
-            
-                xVMHardDiskDrive "$vmname-DataDisk$j"
-                {
-                    VMName = $vmname
-                    ControllerType = 'SCSI'
-                    ControllerLocation = $j
-                    Path = "$targetVMPath\$vmname\$vmname-DataDisk$j.vhdx"
-                    Ensure = 'Present'
                     DependsOn = "[xVMHyperV]VM-$vmname"
                 }
-            }
 
-            script "UnattendXML for $vmname"
-            {
-                GetScript = {
-                    $name = $using:VmName
-                    $result = Test-Path -Path "$using:targetVMPath\$name\Unattend.xml"
-                    return @{ 'Result' = $result }
+                for ($k = 1; $k -le 2; $k++)
+                {
+                    $mgmtNicName = "$vmname-Management$k"
+                    xVMNetworkAdapter "New Network Adapter $mgmtNicName $vmname DHCP"
+                    {
+                        Id = $mgmtNicName
+                        Name = $mgmtNicName
+                        SwitchName = $vSwitchNameMgmt
+                        VMName = $vmname
+                        Ensure = 'Present'
+                        DependsOn = "[xVMHyperV]VM-$vmname"
+                    }
+
+                    cVMNetworkAdapterSettings "Enable $vmname $mgmtNicName Mac address spoofing and Teaming"
+                    {
+                        Id = $mgmtNicName
+                        Name = $mgmtNicName
+                        SwitchName = $vSwitchNameMgmt
+                        VMName = $vmname
+                        AllowTeaming = 'on'
+                        MacAddressSpoofing = 'on'
+                        DependsOn = "[xVMNetworkAdapter]New Network Adapter $mgmtNicName $vmname DHCP"
+                    }
                 }
 
-                SetScript = {
-                    try 
+                for ($l = 1; $l -le 4; $l++) 
+                {
+                    $ipAddress = $('192.168.25' + $l + '.1' + $suffix)
+                    $nicName = "$vmname-Converged-Nic$l"
+
+                    xVMNetworkAdapter "New Network Adapter Converged $vmname $nicName $ipAddress"
                     {
-                        $name = $using:VmName
-                        $mount = Mount-VHD -Path "$using:targetVMPath\$name\$name-OSDisk.vhdx" -Passthru -ErrorAction Stop
-                        Start-Sleep -Seconds 2
-                        $driveLetter = $mount | Get-Disk | Get-Partition | Get-Volume | Where-Object DriveLetter | Select-Object -ExpandProperty DriveLetter
-                        
-                        New-Item -Path $("$driveLetter" + ":" + "\Temp") -ItemType Directory -Force -ErrorAction Stop
-                        
-                        Copy-Item -Path "$using:sourcePath\Install-AzsRolesandFeatures.ps1" -Destination $("$driveLetter" + ":" + "\Temp") -Force -ErrorAction Stop
-
-                        New-BasicUnattendXML -ComputerName $name -LocalAdministratorPassword $($using:Admincreds).Password -Domain $using:DomainName -Username $using:Admincreds.Username `
-                            -Password $($using:Admincreds).Password -JoinDomain $using:DomainName -AutoLogonCount 1 -OutputPath "$using:targetVMPath\$name" -Force `
-                            -PowerShellScriptFullPath 'c:\temp\Install-AzsRolesandFeatures.ps1' -ErrorAction Stop
-
-                        #New-BasicUnattendXML -ComputerName $name -LocalAdministratorPassword $($using:Admincreds).Password -Domain $using:DomainName -Username $using:Admincreds.Username `
-                        #    -Password $($using:Admincreds).Password -JoinDomain $using:DomainName -OutputPath "$using:targetVMPath\$name" -Force
-
-                        Copy-Item -Path "$using:targetVMPath\$name\Unattend.xml" -Destination $("$driveLetter" + ":" + "\Windows\system32\SysPrep") -Force -ErrorAction Stop
-
-                        Start-Sleep -Seconds 2
-                    }
-                    finally 
-                    {
-                        DisMount-VHD -Path "$using:targetVMPath\$name\$name-OSDisk.vhdx"
+                        Id = $nicName
+                        Name = $nicName
+                        SwitchName = $vSwitchNameConverged
+                        VMName = $vmname
+                        NetworkSetting = xNetworkSettings {
+                            IpAddress = $ipAddress
+                            Subnet = "255.255.255.0"
+                        }
+                        Ensure = 'Present'
+                        DependsOn = "[xVMHyperV]VM-$vmname"
                     }
                     
-                    Start-VM -Name $name
+                    cVMNetworkAdapterSettings "Enable $vmname $nicName Mac address spoofing and Teaming"
+                    {
+                        Id = $nicName
+                        Name = $nicName
+                        SwitchName = $vSwitchNameConverged
+                        VMName = $vmname
+                        AllowTeaming = 'on'
+                        MacAddressSpoofing = 'on'
+                        DependsOn = "[xVMNetworkAdapter]New Network Adapter Converged $vmname $nicName $ipAddress"
+                    }
+                }    
+
+                for ($j = 1; $j -lt $azsHostDataDiskCount + 1 ; $j++)
+                { 
+                    xvhd "$vmname-DataDisk$j"
+                    {
+                        Ensure           = 'Present'
+                        Name             = "$vmname-DataDisk$j.vhdx"
+                        Path             = "$targetVMPath\$vmname"
+                        Generation       = 'vhdx'
+                        Type             = 'Dynamic'
+                        MaximumSizeBytes = $dataDiskSize
+                        DependsOn        = "[xVMHyperV]VM-$vmname"
+                    }
+                
+                    xVMHardDiskDrive "$vmname-DataDisk$j"
+                    {
+                        VMName = $vmname
+                        ControllerType = 'SCSI'
+                        ControllerLocation = $j
+                        Path = "$targetVMPath\$vmname\$vmname-DataDisk$j.vhdx"
+                        Ensure = 'Present'
+                        DependsOn = "[xVMHyperV]VM-$vmname"
+                    }
                 }
 
-                TestScript = {
-                    # Create and invoke a scriptblock using the $GetScript automatic variable, which contains a string representation of the GetScript.
-                    $state = [scriptblock]::Create($GetScript).Invoke()
-                    return $state.Result
+                script "UnattendXML for $vmname"
+                {
+                    GetScript = {
+                        $name = $using:VmName
+                        $result = Test-Path -Path "$using:targetVMPath\$name\Unattend.xml"
+                        return @{ 'Result' = $result }
+                    }
+
+                    SetScript = {
+                        try 
+                        {
+                            $name = $using:VmName
+                            $mount = Mount-VHD -Path "$using:targetVMPath\$name\$name-OSDisk.vhdx" -Passthru -ErrorAction Stop
+                            Start-Sleep -Seconds 2
+                            $driveLetter = $mount | Get-Disk | Get-Partition | Get-Volume | Where-Object DriveLetter | Select-Object -ExpandProperty DriveLetter
+                            
+                            New-Item -Path $("$driveLetter" + ":" + "\Temp") -ItemType Directory -Force -ErrorAction Stop
+                            
+                            Copy-Item -Path "$using:sourcePath\branchData\AzureStackHCIonAzure-$using:branch\helpers\Install-AzsRolesandFeatures.ps1" -Destination $("$driveLetter" + ":" + "\Temp") -Force -ErrorAction Stop
+
+                            New-BasicUnattendXML -ComputerName $name -LocalAdministratorPassword $($using:Admincreds).Password -Domain $using:DomainName -Username $using:Admincreds.Username `
+                                -Password $($using:Admincreds).Password -JoinDomain $using:DomainName -AutoLogonCount 1 -OutputPath "$using:targetVMPath\$name" -Force `
+                                -PowerShellScriptFullPath 'c:\temp\Install-AzsRolesandFeatures.ps1' -ErrorAction Stop
+
+                            Copy-Item -Path "$using:targetVMPath\$name\Unattend.xml" -Destination $("$driveLetter" + ":" + "\Windows\system32\SysPrep") -Force -ErrorAction Stop
+
+                            Start-Sleep -Seconds 2
+                        }
+                        finally 
+                        {
+                            DisMount-VHD -Path "$using:targetVMPath\$name\$name-OSDisk.vhdx"
+                        }
+                        
+                        Start-VM -Name $name
+                    }
+
+                    TestScript = {
+                        # Create and invoke a scriptblock using the $GetScript automatic variable, which contains a string representation of the GetScript.
+                        $state = [scriptblock]::Create($GetScript).Invoke()
+                        return $state.Result
+                    }
+                    DependsOn = "[xVhd]NewOSDisk-$vmname", "[archive]Extract branch files"
                 }
-                DependsOn = "[xVhd]NewOSDisk-$vmname", "[script]Download DSC Config for AzsHci Hosts"
             }
         }
-
+        
         file "VM-Folder-$wacVMName"
         {
             Ensure = 'Present'
@@ -893,7 +800,7 @@
                     $driveLetter = $mount | Get-Disk | Get-Partition | Get-Volume | Where-Object DriveLetter | Select-Object -ExpandProperty DriveLetter
                     
                     New-Item -Path $("$driveLetter" + ":" + "\Temp") -ItemType Directory -Force -ErrorAction Stop
-                    Copy-Item -Path "$using:sourcePath\Install-WacUsingChoco.ps1" -Destination $("$driveLetter" + ":" + "\Temp") -Force -ErrorAction Stop
+                    Copy-Item -Path "$using:sourcePath\branchData\AzureStackHCIonAzure-$using:branch\helpers\Install-WacUsingChoco.ps1" -Destination $("$driveLetter" + ":" + "\Temp") -Force -ErrorAction Stop
 
                     New-BasicUnattendXML -ComputerName $name -LocalAdministratorPassword $($using:Admincreds).Password -Domain $using:DomainName -Username $using:Admincreds.Username `
                     -Password $($using:Admincreds).Password -JoinDomain $using:DomainName -AutoLogonCount 1 -OutputPath "$using:targetVMPath\$name" -Force `
@@ -920,7 +827,7 @@
                 $state = [scriptblock]::Create($GetScript).Invoke()
                 return $state.Result
             }
-            DependsOn = "[xVhd]NewOSDisk-$wacVMName", "[script]Download DSC Config for $wacVMName"
+            DependsOn = "[xVhd]NewOSDisk-$wacVMName", "[archive]Extract branch files"
         }
 
         cChocoInstaller InstallChoco
