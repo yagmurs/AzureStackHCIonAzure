@@ -77,6 +77,17 @@
                 "description": "Azure VM additional disk size for hosting Azure Stack HCI VMs amount in GB"
             }
         },
+        "aksHciScenario": {
+            "type": "string",
+            "defaultValue": "onAzureVMDirectly",
+            "metadata": {
+                "description": "Select the scenario if Aks Hci will be deployed on a nested cluster or on top of Azure VM",
+                "allowedValues": [
+                    "onAzureVMDirectly",
+                    "onNestedAzureStackHciClusteronAzureVM"
+                ]
+            }
+        },
         "azsHCIHostCount": {
             "type": "int",
             "defaultValue": 2,
@@ -478,7 +489,8 @@
                                 },
                                 "azsHostCount": "[parameters('azsHCIHostCount')]",
                                 "azsHCIHostMemory": "[parameters('azsHCIHostMemory')]",
-                                "branch": "[parameters('branch')]"
+                                "branch": "[parameters('branch')]",
+                                "aksHciScenario": "[parameters('aksHciScenario')]"
                             }
                         },
                         "protectedSettings": {
