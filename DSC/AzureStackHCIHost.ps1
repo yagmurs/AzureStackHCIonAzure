@@ -192,8 +192,8 @@
         archive "Extract branch files"
         {
             Ensure = 'Present'
-            Path = "$using:sourcePath\$using:branch.zip"
-            Destination = "$using:sourcePath\branchData"
+            Path = "$sourcePath\$branch.zip"
+            Destination = "$sourcePath\branchData"
             Validate = $true
             Checksum = 'SHA-1'
             DependsOn = "[script]Download branch files for $branch"
