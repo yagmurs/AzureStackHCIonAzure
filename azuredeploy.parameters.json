@@ -52,6 +52,9 @@
         },
         "autoShutdownTimeZone": {
             "value": "UTC"
+        },
+        "aksHciScenario": {
+            "value": "onAzureVMDirectly"
         }
     }
 }
