@@ -12,7 +12,7 @@ break
 #                                                           #
 #############################################################
 
-#Enable AksHCI
+#Enable AksHCI on Azure Stack HCI cluster
 
 $targetDrive = "C:\ClusterStorage"
 $AksHciTargetFolder = "AksHCIMain"
