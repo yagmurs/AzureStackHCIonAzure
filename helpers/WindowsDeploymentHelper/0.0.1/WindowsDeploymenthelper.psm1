@@ -120,7 +120,9 @@ Param (
 )
 
         $localAdministratorCreds = New-Object pscredential -ArgumentList Administrator, $LocalAdministratorPassword
+        $domainAdministratorCreds = New-Object pscredential -ArgumentList $Username, $Password
         $LocalAdministratorPasswordClearText = $localAdministratorCreds.GetNetworkCredential().password
+        $domainAdministratorPasswordClearText = $domainAdministratorCreds.GetNetworkCredential().password
         $encodedAdministratorPassword = [System.Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes(('{0}AdministratorPassword' -f $LocalAdministratorPasswordClearText)))
         
         if ($JoinDomain)
@@ -150,8 +152,25 @@ Param (
 
         if ($AutoLogonCount -gt 0)
         {
-            Write-Warning -Message '-AutoLogonCount places the Administrator password in plain txt'
-            $autoLogonXMLString = @"
+            Write-Warning -Message '-AutoLogonCount places the password in plain txt'
+            if ($JoinDomain)
+            {
+                $autoLogonXMLString = @"
+
+      <AutoLogon>
+        <Password>
+          <Value>$domainAdministratorPasswordClearText</Value>
+        </Password>
+        <Domain>$JoinDomain</Domain>
+        <LogonCount>$AutoLogonCount</LogonCount>
+        <Username>$Username</Username>
+        <Enabled>true</Enabled>
+      </AutoLogon>
+"@            
+            }
+            else
+            {
+                $autoLogonXMLString = @"
 
       <AutoLogon>
         <Password>
@@ -162,6 +181,7 @@ Param (
         <Enabled>true</Enabled>
       </AutoLogon>
 "@
+            }
         }
         else
         {
