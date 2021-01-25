@@ -31,6 +31,7 @@ $paramFileAsHash.parameters.keys | ForEach-Object {$templateParameterObject[$_] 
 $templateParameterObject.add("AdminPassword", $encryptedPass)
 $templateParameterObject.location = $location
 $templateParameterObject.branch = $branch
+$templateParameterObject.aksHciScenario = 'onNestedAzureStackHciClusteronAzureVM'
 #$templateParameterObject
 
 do {

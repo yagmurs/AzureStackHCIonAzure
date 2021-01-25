@@ -1,10 +1,41 @@
-#variables
+
+Import-Module AzureStackHCIInstallerHelper
+
+#the following function calls the wizard to setup Azure Stack Hci hosts for Aks Hci Deployment on Azure Stack Hci Cluster
+Start-AksHciPoC
+
+break
+
+#############################################################
+#                                                           #
+# Run the following code on one of the Azure Stack HCI host #
+#                                                           #
+#############################################################
+
+#Enable AksHCI
+
+$targetDrive = "C:\ClusterStorage"
+$AksHciTargetFolder = "AksHCIMain"
+$AksHciTargetPath = "$targetDrive\$AksHciTargetFolder"
+
+Import-Module AksHci
+Initialize-AksHciNode
+
+#Deploy Management Cluster on Azure Stack HCI cluster
+Set-AksHciConfig -imageDir "$AksHciTargetPath\Images" -cloudConfigLocation "$AksHciTargetPath\Config" `
+    -workingDir "$AksHciTargetPath\Working" -vnetName 'Default Switch' -controlPlaneVmSize Default `
+    -loadBalancerVmSize Default
+
+Install-AksHci
+
+#Deploy Target Cluster on Azure Stack HCI cluster
 $targetClusterName = "target-cls1"
 
-#Deploy Target Cluster
 New-AksHciCluster -clusterName $targetClusterName -kubernetesVersion v1.18.8 `
     -controlPlaneNodeCount 1 -linuxNodeCount 1 -windowsNodeCount 0 `
-    -controlplaneVmSize default -loadBalancerVmSize default -linuxNodeVmSize Standard_D4s_v3 -windowsNodeVmSize default
+    -controlplaneVmSize default -loadBalancerVmSize default -linuxNodeVmSize default -windowsNodeVmSize default
+
+break
 
 #list Aks Hci cmdlets
 Get-Command -Noun akshci*
@@ -92,10 +123,5 @@ Get-AksHciLogs
 #List k8s clusters
 Get-AksHciCluster
 
-#
-
-
 #Remove Target cluster
 Remove-AksHciCluster -clusterName $targetClusterName
-
-

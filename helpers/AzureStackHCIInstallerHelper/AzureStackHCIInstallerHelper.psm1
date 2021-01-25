@@ -375,8 +375,8 @@ Function Configure-AzsHciClusterNetwork
         #initializing variables
         $AzureStackHCIHosts = Get-VM hpv*
         $vSwitchNameMgmt = 'Management'
-        $vSwitchNameConverged = "ConvergedSwitch"
-        $vSwitchNameCompute = "ComputeSwitch"
+        $vSwitchNameConverged = "Default Switch"
+        $vSwitchNameCompute = "Default Switch"
         $vSwitchNameStorage = "StorageSwitch"
 
         #Enable Roles 
@@ -812,7 +812,8 @@ function Start-AksHciPoC
 
     process
     {
-
+<#
+ 
         $AzureVMAksHciProfileSelection = Show-Menu -Items @(
             'Azure VM Aks Hci deployment (Selfhost)',
             'Azure Stack HCI cluster deployment'
@@ -832,6 +833,8 @@ function Start-AksHciPoC
             Prepare-AzureVMforAksHciDeployment
             break
         }
+
+ #>
         
         $CleanupVMsSelection = Show-Menu -Items @(
             'Do NOT Cleanup ( !!Default selection!! )',
@@ -840,8 +843,6 @@ function Start-AksHciPoC
             'Yes, Cleanup Azure Stack HCI host VMs Only!',
             'Yes, Cleanup All VMs for both HCI host VMs, Aks Hci VMs!'
         ) -Title 'Cleanup VMs option to start from scratch?' -Description 'This option will destroy All VMs or selected VMs.'
-
-        
 
         $RolesConfigurationProfileSelection = Show-Menu -Items @(
             'Do NOT install any Roles ( !!Default selection!! )',
@@ -941,7 +942,6 @@ function Start-AksHciPoC
             1 {Write-Warning "You may need to prepare Azure Stack HCI cluster for Aks Hci pre-requisites manually!"}
             Default {Prepare-AzsHciClusterforAksHciDeployment -Verbose} 
         }
-
     }
 
     end
