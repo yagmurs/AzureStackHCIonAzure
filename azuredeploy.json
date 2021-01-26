@@ -80,12 +80,12 @@
         "aksHciScenario": {
             "type": "string",
             "defaultValue": "onAzureVMDirectly",
-            "metadata": {
-                "description": "Select the scenario if Aks Hci will be deployed on a nested cluster or on top of Azure VM",
                 "allowedValues": [
                     "onAzureVMDirectly",
                     "onNestedAzureStackHciClusteronAzureVM"
-                ]
+                ],
+            "metadata": {
+                "description": "Select the scenario if Aks Hci will be deployed on a nested cluster or on top of Azure VM"
             }
         },
         "azsHCIHostCount": {
