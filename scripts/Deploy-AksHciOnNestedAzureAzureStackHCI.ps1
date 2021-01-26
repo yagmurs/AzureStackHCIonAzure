@@ -4,12 +4,38 @@ Import-Module AzureStackHCIInstallerHelper
 # The following function calls the wizard to prepare Azure Stack Hci hosts for Aks Hci Deployment
 Start-AksHciPoC -verbose
 
-
-
 break 
 
-# Register Azure Stack HCI on Azure
+#############################################################
+#                                                           #
+# Run the following code on one of the Azure Stack HCI host #
+#                                                           #
+#############################################################
 
+#Enable AksHCI on Azure Stack HCI cluster
+
+$targetDrive = "C:\ClusterStorage"
+$AksHciTargetFolder = "AksHCIMain"
+$AksHciTargetPath = "$targetDrive\$AksHciTargetFolder"
+$sourcePath =  "$AksHciTargetPath\source" 
+
+#pre-requisites 
+# Install Az module to access Azure
+Install-Module az
+
+# Download and Install az cli
+New-Item -Path $sourcePath -ItemType Directory -Force
+Start-BitsTransfer https://aka.ms/installazurecliwindows $sourcePath\azcli.msi
+msiexec.exe /i $sourcePath\azcli.msi /qb
+
+# Add and update Az Cli k8sconfiguration and connectedk8s extensions
+# https://docs.microsoft.com/en-us/azure/azure-arc/kubernetes/connect-cluster
+az extension add --name connectedk8s
+az extension add --name k8sconfiguration
+az extension update --name connectedk8s
+az extension update --name k8sconfiguration
+
+# Register Azure Stack HCI on Azure
 # https://docs.microsoft.com/en-us/azure-stack/hci/deploy/register-with-azure
 
 Install-Module -Name Az.StackHCI
@@ -23,18 +49,6 @@ $location = "Eastus"
 Register-AzStackHCI  -SubscriptionId $subscriptionID -ComputerName $hciHost -ResourceName $hciClusterName -ResourceGroupName $rgName -Region $location
 
 break
-
-#############################################################
-#                                                           #
-# Run the following code on one of the Azure Stack HCI host #
-#                                                           #
-#############################################################
-
-#Enable AksHCI on Azure Stack HCI cluster
-
-$targetDrive = "C:\ClusterStorage"
-$AksHciTargetFolder = "AksHCIMain"
-$AksHciTargetPath = "$targetDrive\$AksHciTargetFolder"
 
 Import-Module AksHci
 Initialize-AksHciNode
@@ -63,9 +77,6 @@ Get-AksHciCluster
 
 #Retreive AksHCI logs for Target Cluster deployment
 Get-AksHciCredential -clusterName $targetClusterName
-
-# Install Az module to access Azure
-Install-Module az
 
 # list Az module 
 Get-Command -Noun az*
@@ -105,9 +116,8 @@ kubectl get pods -n azure-arc-onboarding
 kubectl describe pod -n azure-arc-onboarding azure-arc-onboarding-<Name of the pod>
 kubectl logs -n azure-arc-onboarding azure-arc-onboarding-<Name of the pod>
 
-#deploy demo application from Azure Arc Enabled Kubernetes from portal
+# deploy demo application from Azure Arc Enabled Kubernetes from Azure portal
 #https://github.com/Azure/arc-k8s-demo
-
 
 <#
     Go to Azure arc kubernetes cluster select gitops and add, provide following information
@@ -119,6 +129,11 @@ kubectl logs -n azure-arc-onboarding azure-arc-onboarding-<Name of the pod>
     Operator scope: Cluster
     add
 #>
+
+# deploy demo application from Azure Arc Enabled Kubernetes using Az Cli
+# https://docs.microsoft.com/en-us/azure/azure-arc/kubernetes/use-gitops-connected-cluster
+az login
+az k8sconfiguration create --name cluster-config --cluster-name $targetClusterName --resource-group $rg.ResourceGroupName --operator-instance-name cluster-config --operator-namespace cluster-config --repository-url https://github.com/Azure/arc-k8s-demo --scope cluster --cluster-type connectedClusters
 
 # list all service config
 kubectl.exe get services
@@ -143,6 +158,3 @@ Get-AksHciCluster
 
 #Remove Target cluster
 Remove-AksHciCluster -clusterName $targetClusterName
-
-# uninstall / remove Aks Hci Deployment
-Uninstall-AksHci
