@@ -71,9 +71,18 @@
     Import-DscResource -ModuleName 'cChoco'
     Import-DscResource -ModuleName 'DSCR_Shortcut'
     
-    $branchFiles = "https://github.com/yagmurs/AzureStackHCIonAzure/archive/$branch.zip"
-    $aszhciHostsMofUri = "https://raw.githubusercontent.com/yagmurs/AzureStackHCIonAzure/$branch/helpers/Install-AzsRolesandFeatures.ps1"
-    $wacMofUri = "https://raw.githubusercontent.com/yagmurs/AzureStackHCIonAzure/$branch/helpers/Install-WacUsingChoco.ps1"
+    $repoName = "AzureStackHCIonAzure"
+    $repoBaseUrl = "https://github.com/yagmurs/$repoName"
+    $branchFiles = "$repoBaseUrl/archive/$branch.zip"
+    
+    if ($aksHciScenario -eq 'onAzureVMDirectly') {
+        $labScript = "Deploy-AksHciOnAzureVM.ps1"
+    }
+    else
+    {
+        $labScript = "Deploy-AksHciOnNestedAzureAzureStackHCI.ps1"
+    }
+    
     [System.Management.Automation.PSCredential]$DomainCreds = New-Object System.Management.Automation.PSCredential ("${DomainName}\$($Admincreds.UserName)", $Admincreds.Password)
     
     $ipConfig = (Get-NetAdapter -Physical | Get-NetIPConfiguration | Where-Object IPv4DefaultGateway)
@@ -696,7 +705,7 @@
                             
                             New-Item -Path $("$driveLetter" + ":" + "\Temp") -ItemType Directory -Force -ErrorAction Stop
                             
-                            Copy-Item -Path "$using:sourcePath\branchData\AzureStackHCIonAzure-$using:branch\helpers\Install-AzsRolesandFeatures.ps1" -Destination $("$driveLetter" + ":" + "\Temp") -Force -ErrorAction Stop
+                            Copy-Item -Path "$using:sourcePath\branchData\$using:repoName-$using:branch\helpers\Install-AzsRolesandFeatures.ps1" -Destination $("$driveLetter" + ":" + "\Temp") -Force -ErrorAction Stop
 
                             New-BasicUnattendXML -ComputerName $name -LocalAdministratorPassword $($using:Admincreds).Password -Domain $using:DomainName -Username $using:Admincreds.Username `
                                 -Password $($using:Admincreds).Password -JoinDomain $using:DomainName -AutoLogonCount 1 -OutputPath "$using:targetVMPath\$name" -Force `
@@ -800,7 +809,7 @@
                     $driveLetter = $mount | Get-Disk | Get-Partition | Get-Volume | Where-Object DriveLetter | Select-Object -ExpandProperty DriveLetter
                     
                     New-Item -Path $("$driveLetter" + ":" + "\Temp") -ItemType Directory -Force -ErrorAction Stop
-                    Copy-Item -Path "$using:sourcePath\branchData\AzureStackHCIonAzure-$using:branch\helpers\Install-WacUsingChoco.ps1" -Destination $("$driveLetter" + ":" + "\Temp") -Force -ErrorAction Stop
+                    Copy-Item -Path "$using:sourcePath\branchData\$using:repoName-$using:branch\helpers\Install-WacUsingChoco.ps1" -Destination $("$driveLetter" + ":" + "\Temp") -Force -ErrorAction Stop
 
                     New-BasicUnattendXML -ComputerName $name -LocalAdministratorPassword $($using:Admincreds).Password -Domain $using:DomainName -Username $using:Admincreds.Username `
                     -Password $($using:Admincreds).Password -JoinDomain $using:DomainName -AutoLogonCount 1 -OutputPath "$using:targetVMPath\$name" -Force `
@@ -871,8 +880,15 @@
         {
             Path      = 'C:\Users\Public\Desktop\Poc Guide.lnk'
             Target    = 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
-            Arguments = 'https://yagmurs.github.io/AzureStackHCIonAzure'
+            Arguments = "https://yagmurs.github.io/$repoName"
             Icon      = 'shell32.dll,74'
+        }
+
+        cShortcut "Lab Guide Shortcut"
+        {
+            Path      = 'C:\Users\Public\Desktop\Lab Script.lnk'
+            Target    = 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell_ise.exe'
+            Arguments = "$sourcePath\branchData\$repoName-$branch\scripts\$labScript"
         }
     }
 }

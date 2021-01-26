@@ -1,8 +1,26 @@
 
 Import-Module AzureStackHCIInstallerHelper
 
-#the following function calls the wizard to setup Azure Stack Hci hosts for Aks Hci Deployment on Azure Stack Hci Cluster
-Start-AksHciPoC
+# The following function calls the wizard to prepare Azure Stack Hci hosts for Aks Hci Deployment
+Start-AksHciPoC -verbose
+
+
+
+break 
+
+# Register Azure Stack HCI on Azure
+
+# https://docs.microsoft.com/en-us/azure-stack/hci/deploy/register-with-azure
+
+Install-Module -Name Az.StackHCI
+
+$subscriptionID = "<subscription_ID>"
+$hciHost = "HPV01" # one of the Hci Hosts
+$hciClusterName = "hci01"
+$rgName = "AzureStackHci-rg"
+$location = "Eastus"
+
+Register-AzStackHCI  -SubscriptionId $subscriptionID -ComputerName $hciHost -ResourceName $hciClusterName -ResourceGroupName $rgName -Region $location
 
 break
 
@@ -29,7 +47,7 @@ Set-AksHciConfig -imageDir "$AksHciTargetPath\Images" -cloudConfigLocation "$Aks
 Install-AksHci
 
 #Deploy Target Cluster on Azure Stack HCI cluster
-$targetClusterName = "target-cls1"
+$targetClusterName = "target-cls1-on-hci"
 
 New-AksHciCluster -clusterName $targetClusterName -kubernetesVersion v1.18.8 `
     -controlPlaneNodeCount 1 -linuxNodeCount 1 -windowsNodeCount 0 `
@@ -78,7 +96,7 @@ $sp = New-AzADServicePrincipal -Role Contributor -Scope /subscriptions/903b7ed3-
 
 #https://docs.microsoft.com/en-us/azure-stack/aks-hci/connect-to-arc
 # Onboard Aks Hci to Azure Arc
-Install-AksHciArcOnboarding -clusterName "target-cls1" -resourcegroup $rg.ResourceGroupName -location $rg.location -subscriptionId $context.Subscription.Id -clientid $sp.ApplicationId -clientsecret $credObject.GetNetworkCredential().Password -tenantid $context.Tenant.Id
+Install-AksHciArcOnboarding -clusterName $targetClusterName -resourcegroup $rg.ResourceGroupName -location $rg.location -subscriptionId $context.Subscription.Id -clientid $sp.ApplicationId -clientsecret $credObject.GetNetworkCredential().Password -tenantid $context.Tenant.Id
 
 # get state of the onboarding process
 kubectl get pods -n azure-arc-onboarding
@@ -115,7 +133,7 @@ Set-AksHciClusterNodeCount -clusterName $targetClusterName -linuxNodeCount 2 -wi
 
 
 # uninstall / remove from Azure Arc
-Uninstall-AksHciArcOnboarding -clusterName "target-cls1"
+Uninstall-AksHciArcOnboarding -clusterName $targetClusterName
 
 #Retreive AksHCI logs for Target Cluster deployment
 Get-AksHciLogs
@@ -125,3 +143,6 @@ Get-AksHciCluster
 
 #Remove Target cluster
 Remove-AksHciCluster -clusterName $targetClusterName
+
+# uninstall / remove Aks Hci Deployment
+Uninstall-AksHci

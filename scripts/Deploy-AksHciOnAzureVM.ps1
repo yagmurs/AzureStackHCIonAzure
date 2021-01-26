@@ -3,12 +3,27 @@
 #the following function downloads, extract and place required PowerShell Modules in PowerShell modules folder
 Prepare-AzureVMforAksHciDeployment
 
-#Enable AksHCI
-
 $targetDrive = "V:"
 $AksHciTargetFolder = "AksHCIMain"
 $AksHciTargetPath = "$targetDrive\$AksHciTargetFolder"
+$sourcePath =  "$targetDrive\source" 
 
+#pre-requisites 
+# Install Az module to access Azure
+Install-Module az
+
+# Download and Install az cli
+Start-BitsTransfer https://aka.ms/installazurecliwindows $sourcePath\azcli.msi
+msiexec.exe /i $sourcePath\azcli.msi /qb
+
+# Add and update Az Cli k8sconfiguration and connectedk8s extensions
+# https://docs.microsoft.com/en-us/azure/azure-arc/kubernetes/connect-cluster
+az extension add --name connectedk8s
+az extension add --name k8sconfiguration
+az extension update --name connectedk8s
+az extension update --name k8sconfiguration
+
+#Enable AksHCI
 Import-Module AksHci
 Initialize-AksHciNode
 
@@ -26,6 +41,8 @@ New-AksHciCluster -clusterName $targetClusterName -kubernetesVersion v1.18.8 `
     -controlPlaneNodeCount 1 -linuxNodeCount 1 -windowsNodeCount 0 `
     -controlplaneVmSize default -loadBalancerVmSize default -linuxNodeVmSize Standard_D4s_v3 -windowsNodeVmSize default
 
+break
+
 #list Aks Hci cmdlets
 Get-Command -Noun akshci*
 
@@ -34,9 +51,6 @@ Get-AksHciCluster
 
 #Retreive AksHCI logs for Target Cluster deployment
 Get-AksHciCredential -clusterName $targetClusterName
-
-# Install Az module to access Azure
-Install-Module az
 
 # list Az module 
 Get-Command -Noun az*
@@ -67,7 +81,7 @@ $sp = New-AzADServicePrincipal -Role Contributor -Scope /subscriptions/903b7ed3-
 
 #https://docs.microsoft.com/en-us/azure-stack/aks-hci/connect-to-arc
 # Onboard Aks Hci to Azure Arc
-Install-AksHciArcOnboarding -clusterName "target-cls1" -resourcegroup $rg.ResourceGroupName -location $rg.location -subscriptionId $context.Subscription.Id -clientid $sp.ApplicationId -clientsecret $credObject.GetNetworkCredential().Password -tenantid $context.Tenant.Id
+Install-AksHciArcOnboarding -clusterName $targetClusterName -resourcegroup $rg.ResourceGroupName -location $rg.location -subscriptionId $context.Subscription.Id -clientid $sp.ApplicationId -clientsecret $credObject.GetNetworkCredential().Password -tenantid $context.Tenant.Id
 
 # get state of the onboarding process
 kubectl get pods -n azure-arc-onboarding
@@ -76,9 +90,8 @@ kubectl get pods -n azure-arc-onboarding
 kubectl describe pod -n azure-arc-onboarding azure-arc-onboarding-<Name of the pod>
 kubectl logs -n azure-arc-onboarding azure-arc-onboarding-<Name of the pod>
 
-#deploy demo application from Azure Arc Enabled Kubernetes from portal
+# deploy demo application from Azure Arc Enabled Kubernetes from Azure portal
 #https://github.com/Azure/arc-k8s-demo
-
 
 <#
     Go to Azure arc kubernetes cluster select gitops and add, provide following information
@@ -90,6 +103,11 @@ kubectl logs -n azure-arc-onboarding azure-arc-onboarding-<Name of the pod>
     Operator scope: Cluster
     add
 #>
+
+# deploy demo application from Azure Arc Enabled Kubernetes using Az Cli
+# https://docs.microsoft.com/en-us/azure/azure-arc/kubernetes/use-gitops-connected-cluster
+az login
+az k8sconfiguration create --name cluster-config --cluster-name $targetClusterName --resource-group $rg.ResourceGroupName --operator-instance-name cluster-config --operator-namespace cluster-config --repository-url https://github.com/Azure/arc-k8s-demo --scope cluster --cluster-type connectedClusters
 
 # list all service config
 kubectl.exe get services
@@ -104,7 +122,7 @@ Set-AksHciClusterNodeCount -clusterName $targetClusterName -linuxNodeCount 2 -wi
 
 
 # uninstall / remove from Azure Arc
-Uninstall-AksHciArcOnboarding -clusterName "target-cls1"
+Uninstall-AksHciArcOnboarding -clusterName $targetClusterName
 
 #Retreive AksHCI logs for Target Cluster deployment
 Get-AksHciLogs
@@ -114,4 +132,3 @@ Get-AksHciCluster
 
 #Remove Target cluster
 Remove-AksHciCluster -clusterName $targetClusterName
-

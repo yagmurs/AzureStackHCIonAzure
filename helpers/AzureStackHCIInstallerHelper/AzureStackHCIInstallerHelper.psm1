@@ -33,7 +33,7 @@ function Cleanup-VMs
         #initializing variables
         $domainName = (Get-ADDomain).DnsRoot
         $dhcpScopeString = '192.168.0.0'
-        $sleep = 240
+        $sleep = 300
 
     }
     Process
@@ -812,29 +812,6 @@ function Start-AksHciPoC
 
     process
     {
-<#
- 
-        $AzureVMAksHciProfileSelection = Show-Menu -Items @(
-            'Azure VM Aks Hci deployment (Selfhost)',
-            'Azure Stack HCI cluster deployment'
-        ) -Title 'Aks Hci on Azure VM or HCI cluster options' -Description 'If you select this option Azure VM be prepared for Aks Hci Deployment'
-
-        if ($AzureVMAksHciProfileSelection -eq 0)
-        {
-            Write-Verbose "Azure VM will be prepared for Aks Hci deployment"
-            Write-Warning "Clean up will remove VMs"
-            Cleanup-VMs -AzureStackHciHostVMs -DoNotRedeploy -Verbose
-            
-            if ((Get-Vm * -ErrorAction SilentlyContinue | where name -ne 'wac').count -gt 0)
-            {
-                Uninstall-AksHci
-            }
-            
-            Prepare-AzureVMforAksHciDeployment
-            break
-        }
-
- #>
         
         $CleanupVMsSelection = Show-Menu -Items @(
             'Do NOT Cleanup ( !!Default selection!! )',
@@ -877,23 +854,14 @@ function Start-AksHciPoC
             'Do NOT Prepare for Aks Hci Deployment yet.'
         ) -Title 'Azure Stack HCI Cluster Aks Hci preparation options' -Description 'Prepare Azure Stack HCI Cluster with Aks Hci pre-requisites'
 
-    
         switch ($CleanupVMsSelection)
         {
-            1 {Cleanup-VMs -AzureStackHciHostVMs -WindowsAdminCenterVM -Verbose}
+            1 {Cleanup-VMs -AzureStackHciHostVMs -WindowsAdminCenterVM -Verbose; Prepare-AdforAzsHciDeployment}
             2 {Cleanup-VMs -WindowsAdminCenterVM -Verbose}
-            3 {Cleanup-VMs -AzureStackHciHostVMs -Verbose}
-            4 {if ((Get-Vm * | where name -ne 'wac').count -gt 0){Uninstall-AksHci}; Cleanup-VMs -AzureStackHciHostVMs -Verbose}
+            3 {Cleanup-VMs -AzureStackHciHostVMs -Verbose; Prepare-AdforAzsHciDeployment}
+            4 {if ((Get-Vm * | Where-Object name -ne 'wac').count -gt 0){Uninstall-AksHci}; Cleanup-VMs -AzureStackHciHostVMs -Verbose; Prepare-AdforAzsHciDeployment}
             Default {Write-Warning "[Cleanup-VMs]: No Cleanup selected."} 
         }
-        
-        switch ($AzureVMAksHciProfileSelection)
-        {
-            1 {}
-            default {Prepare-AzureVMforAksHciDeployment}
-        }
-
-        Prepare-AdforAzsHciDeployment
 
         $cimSession = New-CimSession -ComputerName $AzureStackHCIHosts.name
 
