@@ -37,7 +37,7 @@ $targetDrive = "C:\ClusterStorage"
 $AksHciTargetFolder = "AksHCIMain"
 $AksHciTargetPath = "$targetDrive\$AksHciTargetFolder"
 $sourcePath =  "$AksHciTargetPath\source" 
-$targetClusterName = "target-cls1-on-HCI"
+$targetClusterName = "target-cls1-on-hci" #must be lower case
 $tenant = "xxxxxxxxxxx.onmicrosoft.com"
 $subscriptionID = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 $rgName = "new-arc-rg"
@@ -55,11 +55,14 @@ Set-ExecutionPolicy Bypass -Scope Process -Force
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
 Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
 
+# supress choco installation prompt
+choco feature enable -n allowGlobalConfirmation
+
 # Install Azure Cli using Chocolatey
-choco.exe install az-cli
+choco install azure-cli
 
 # Install latest Helm using Chocolatey
-choco.exe install kubernetes-helm
+choco install kubernetes-helm
 
 #update environment variable values after Azure Cli and Helm installation
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
@@ -68,8 +71,10 @@ $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
 # https://docs.microsoft.com/en-us/azure/azure-arc/kubernetes/connect-cluster
 az extension add --name connectedk8s
 az extension add --name k8sconfiguration
+
+# check if update available for extensions 
 az extension update --name connectedk8s
-az extension update --name k8sconfiguration --debug
+az extension update --name k8sconfiguration
 
 #endregion pre-requisites
 
@@ -78,21 +83,72 @@ break
 #region Enable AksHCI
 
 #Deploy Management Cluster
+# https://docs.microsoft.com/en-us/azure-stack/aks-hci/create-kubernetes-cluster-powershell
 Import-Module AksHci
 Initialize-AksHciNode
 
-Set-AksHciConfig -imageDir "$AksHciTargetPath\Images" -cloudConfigLocation "$AksHciTargetPath\Config" `
-    -workingDir "$AksHciTargetPath\Working" -vnetName 'Default Switch' -controlPlaneVmSize Default `
-    -loadBalancerVmSize Default -vnetType ICS
+$managementClusterParams = @{
+    imageDir = "$AksHciTargetPath\Images"
+    cloudConfigLocation = "$AksHciTargetPath\Config"
+    workingDir = "$AksHciTargetPath\Working"
+    vnetName = 'Default Switch'
+    controlPlaneVmSize = 'default' # Get-AksHciVmSize
+    loadBalancerVmSize = 'default' # Get-AksHciVmSize
+}
+
+Set-AksHciConfig @managementClusterParams
 
 Install-AksHci
 
 #Deploy Target Cluster
-New-AksHciCluster -clusterName $targetClusterName -kubernetesVersion v1.18.8 `
-    -controlPlaneNodeCount 1 -linuxNodeCount 1 -windowsNodeCount 0 `
-    -controlplaneVmSize default -loadBalancerVmSize default -linuxNodeVmSize Standard_D4s_v3 -windowsNodeVmSize default
+
+$targetClusterParams = @{
+    clusterName = $targetClusterName
+    kubernetesVersion = 'v1.18.8'
+    controlPlaneNodeCount = 1
+    linuxNodeCount = 1
+    windowsNodeCount = 0
+    controlPlaneVmSize = 'default' # Get-AksHciVmSize
+    loadBalancerVmSize = 'default' # Get-AksHciVmSize
+    linuxNodeVmSize = 'default' # Get-AksHciVmSize
+    windowsNodeVmSize = 'default' # Get-AksHciVmSize
+}
+
+New-AksHciCluster @targetClusterParams
 
 #endregion Enable AksHCI
+
+#region deploy and upgrade kubernetes cluster
+# https://docs.microsoft.com/en-us/azure-stack/aks-hci/create-kubernetes-cluster-powershell#step-3-upgrade-kubernetes-version
+
+$demoClusterParams = @{
+    clusterName = 'update-demo'
+    kubernetesVersion = 'v1.16.10' # v1.16.15, v1.17.11, v1.18.8
+    controlPlaneNodeCount = 1
+    linuxNodeCount = 1
+    windowsNodeCount = 0
+    controlPlaneVmSize = 'default' # Get-AksHciSize
+    loadBalancerVmSize = 'default' # Get-AksHciSize
+    linuxNodeVmSize = 'default' # Get-AksHciSize
+    windowsNodeVmSize = 'default' # Get-AksHciSize
+}
+
+New-AksHciCluster @demoClusterParams
+
+#List k8s clusters
+Get-AksHciCluster -clusterName update-demo
+
+# scale up controller node count
+Set-AksHciClusterNodeCount -clusterName update-demo -controlPlaneNodeCount 3
+
+# run update patch (1.16.x --> 1.16.y)
+Update-AksHciCluster -clusterName update-demo -patch
+
+# run update without patching (1.16.x --> 1.17.y)
+Update-AksHciCluster -clusterName update-demo
+
+
+#endregion
 
 break
 
