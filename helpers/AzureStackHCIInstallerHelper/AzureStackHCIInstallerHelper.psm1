@@ -731,14 +731,12 @@ function Configure-AzsHciCluster
         #initializing variables
         $AzureStackHCIHosts = Get-VM hpv*
 
-        $cimSession = New-CimSession -ComputerName $AzureStackHCIHosts.Name
+        $cimSession = New-CimSession -ComputerName $AzureStackHCIHosts[0].Name
        
     }
 
     Process
     {
-        
-
         Write-Verbose "Enabling Cluster: $ClusterName"
         New-Cluster -Name $ClusterName -Node $AzureStackHCIHosts.Name -NoStorage -Force
         Write-Verbose "Enabling Storage Spaces Direct on Cluster: $ClusterName"
