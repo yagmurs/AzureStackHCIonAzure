@@ -122,25 +122,25 @@
                 }
             },
             "dependsOn": [
-                "[resourceId('Microsoft.Resources/deployments', 'prepareGalleryImage')]",
-                "[resourceId('Microsoft.Resources/deployments', 'vNetWithPredefinedNsg')]"
+                "[resourceId('Microsoft.Resources/deployments', 'prepare-gallery-image')]",
+                "[resourceId('Microsoft.Resources/deployments', 'vnet-with-predefined-nsg')]"
             ]
         }
     ],
     "outputs": {
-        "outputFromLinkedTemplate-prepareGalleryImage": {
+        "outputFromLinkedTemplate-prepare-gallery-image": {
             "type": "string",
             "value": "[reference('prepare-gallery-image').outputs.imageResourceId]"
         },
-        "outputFromLinkedTemplate-vNetWithPredefinedNsg-vnetResourceId": {
+        "outputFromLinkedTemplate-vnet-with-predefined-nsg-vnetResourceId": {
             "type": "string",
             "value": "[reference('vnet-with-predefined-nsg').outputs.vnetResourceId]"
         },
-        "outputFromLinkedTemplate-vNetWithPredefinedNsg-managementSubnetResourceId": {
+        "outputFromLinkedTemplate-vnet-with-predefined-nsg-managementSubnetResourceId": {
             "type": "string",
             "value": "[reference('vnet-with-predefined-nsg').outputs.managementSubnetResourceId]"
         },
-        "outputFromLinkedTemplate-vNetWithPredefinedNsg-smbSubnetResourceId": {
+        "outputFromLinkedTemplate-vnet-with-predefined-nsg-smbSubnetResourceId": {
             "type": "string",
             "value": "[reference('vnet-with-predefined-nsg').outputs.smbSubnetResourceId]"
         }
