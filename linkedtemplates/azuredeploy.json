@@ -70,6 +70,13 @@
                 "description": "description"
             },
             "defaultValue": true
+        },
+        "enableHybridBenefitServerLicenses": {
+            "type": "bool",
+            "defaultValue": true,
+            "metadata": {
+            "description": "Enable Azure Hybrid Benefit to use your on-premises Windows Server licenses and reduce cost. See https://docs.microsoft.com/en-us/azure/virtual-machines/windows/hybrid-use-benefit-licensing for more information."
+            }
         }
     },
     "functions": [],
@@ -117,7 +124,7 @@
         {
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2021-04-01",
-            "name": "[concat('AzureStackHci-node-deployment-for_', variables('azureStackHciNodePrefix'), copyIndex())]",
+            "name": "[concat('AzureStackHci-node-deployment-', variables('azureStackHciNodePrefix'), copyIndex())]",
             "copy": {
                 "name": "multiplenodes",
                 "count": "[parameters('azureStackHciNodeCount')]"
@@ -133,10 +140,10 @@
                         "value": "[concat(variables('azureStackHciNodePrefix'), copyIndex())]"
                     },
                     "subnetResourceId": {
-                        "value": "[reference('vnet-with-predefined-nsg').outputs.managementSubnetResourceId]"
+                        "value": "[reference('vnet-with-predefined-nsg').outputs.managementSubnetResourceId.value]"
                     },
                     "imageResourceId": {
-                        "value": "[reference('prepare-gallery-image').outputs.imageResourceId]"
+                        "value": "[reference('prepare-gallery-image').outputs.imageResourceId.value]"
                     },
                     "adminUsername": {
                         "value": "[parameters('adminUsername')]"
@@ -155,19 +162,19 @@
     "outputs": {
         "outputFromLinkedTemplate-prepare-gallery-image": {
             "type": "string",
-            "value": "[reference('prepare-gallery-image').outputs.imageResourceId]"
+            "value": "[reference('prepare-gallery-image').outputs.imageResourceId.value]"
         },
         "outputFromLinkedTemplate-vnet-with-predefined-nsg-vnetResourceId": {
             "type": "string",
-            "value": "[reference('vnet-with-predefined-nsg').outputs.vnetResourceId]"
+            "value": "[reference('vnet-with-predefined-nsg').outputs.vnetResourceId.value]"
         },
         "outputFromLinkedTemplate-vnet-with-predefined-nsg-managementSubnetResourceId": {
             "type": "string",
-            "value": "[reference('vnet-with-predefined-nsg').outputs.managementSubnetResourceId]"
+            "value": "[reference('vnet-with-predefined-nsg').outputs.managementSubnetResourceId.value]"
         },
         "outputFromLinkedTemplate-vnet-with-predefined-nsg-smbSubnetResourceId": {
             "type": "string",
-            "value": "[reference('vnet-with-predefined-nsg').outputs.smbSubnetResourceId]"
+            "value": "[reference('vnet-with-predefined-nsg').outputs.smbSubnetResourceId.value]"
         }
     }
 }
