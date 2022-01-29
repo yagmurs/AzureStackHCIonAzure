@@ -221,10 +221,7 @@
                             "sasToken": "[parameters('_artifactsLocationSasToken')]",
                             "configurationFunction": "hcinode.ps1\\hciconfig"
                         },
-                        "protectedSettings": {},
-                        "dependsOn": [
-                            "[resourceId('Microsoft.Compute/virtualMachines', parameters('vmName'))]"
-                        ]
+                        "protectedSettings": {}
                     }
                 },
                 {
@@ -233,6 +230,9 @@
                     "apiVersion": "2021-03-01",
                     "name": "[concat(parameters('vmName'), '/joindomain')]",
                     "location": "[resourceGroup().location]",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Compute/virtualMachines', parameters('vmName'))]"
+                    ],
                     "properties": {
                         "publisher": "Microsoft.Compute",
                         "type": "JsonADDomainExtension",
@@ -247,10 +247,7 @@
                         },
                         "protectedSettings": {
                             "Password": "[parameters('adminPassword')]"
-                        },
-                        "dependsOn": [
-                            "[resourceId('Microsoft.Compute/virtualMachines', parameters('vmName'))]"
-                        ]
+                        }
                     }   
                 }
             ]
