@@ -16,7 +16,7 @@
             },
             "defaultValue": ""
         },
-        "vhdLocation": {
+        "sourceVhdLocation": {
             "type": "string",
              "metadata": {
                 "description": "Parent path for source image. Will be contatenated with imageFileName parameter."
@@ -51,7 +51,14 @@
                     "uri": "[concat(parameters('_artifactsLocation'), '/linkedtemplates/imagefromexternalsource.json', parameters('_artifactsLocationSasToken'))]",
                     "contentVersion": "1.0.0.0"
                 },
-                "parameters": {}
+                "parameters": {
+                    "sourceVhdLocation": {
+                        "value": "[parameters('sourceVhdLocation')]"
+                    },
+                    "imageFileName": {
+                        "value": "[parameters('imageFileName')]"
+                    }
+                }
             }
         },
         {
