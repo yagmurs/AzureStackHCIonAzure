@@ -52,6 +52,24 @@
             },
             "defaultValue": 2,
             "maxValue": 16
+        },
+        "adminUsername": {
+            "type": "string",
+            "defaultValue": "adm01"
+        },
+        "adminPassword": {
+            "type": "securestring"
+        },
+        "activeDirectoryFqdn": {
+            "type": "string",
+            "defaultValue": "corp.contoso.com"        
+        },
+        "installAdminCenterOnDc": {
+            "type": "bool",
+            "metadata": {
+                "description": "description"
+            },
+            "defaultValue": true
         }
     },
     "functions": [],
@@ -119,6 +137,12 @@
                     },
                     "imageResourceId": {
                         "value": "[reference('prepare-gallery-image').outputs.imageResourceId]"
+                    },
+                    "adminUsername": {
+                        "value": "[parameters('adminUsername')]"
+                    },
+                    "adminPassword": {
+                        "value": "[parameters('adminPassword')]"
                     }
                 }
             },
