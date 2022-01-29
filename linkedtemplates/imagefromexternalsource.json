@@ -1,0 +1,106 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "vhdLocation": {
+            "type": "string",
+            "metadata": {
+                "description": "Parent path for source image. Will be contatenated with imageFileName parameter."
+            },
+            "defaultValue": "https://azurestackhciwesteurope.blob.core.windows.net/ashci"
+        },
+        "utcValue": {
+            "type": "string",
+            "defaultValue": "[utcNow()]"
+        },
+        "imageFileName": {
+            "type": "string",
+            "metadata": {
+                "description": "File name for source image file. Will be contatenated with vhdLocation parameter."
+            },
+            "allowedValues": ["21h2-g2", "22h2-g2"],
+            "defaultValue": "21h2-g2"
+        },
+        "deploymentScriptUri": {
+            "type": "string",
+            "defaultValue": "https://raw.githubusercontent.com/Azure/AksHcionAzureVM/master/scripts/Copy-BlobContent.ps1"
+        }
+    },
+    "functions": [],
+    "variables": {
+        "accountSasFunctionValues": {
+            "signedServices": "b",
+            "signedPermission": "rwlu",
+            "signedResourceTypes": "sco",
+            "signedExpiry": "2023-12-31T00:00:00Z"
+        },
+        "storageAccountName": "[uniqueString(subscription().subscriptionId, resourceGroup().name, parameters('utcValue'))]",
+        "containerName": "images",
+        "imageName": "[concat('azure-stack-hci-', parameters('imageFileName'))]",
+        "vhdLocationValidation": "[if(endsWith(parameters('vhdLocation'), '/'), substring(parameters('vhdLocation'), 0, lastIndexOf(parameters('vhdLocation'), '/')), parameters('vhdLocation'))]",
+        "VhdUri": "[concat(variables('vhdLocationValidation'), '/', parameters('imageFileName'), '.vhd')]"
+    },
+    "resources": [
+        {
+            "name": "[variables('storageAccountName')]",
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2021-04-01",
+            "location": "[resourceGroup().location]",
+            "kind": "StorageV2",
+            "sku": {
+                "name": "Standard_LRS",
+                "tier": "Standard"
+            },
+            "resources": [
+                {
+                    "name": "[concat('default/', variables('containerName'))]",
+                    "type": "blobServices/containers",
+                    "apiVersion": "2021-06-01",
+                    "dependsOn": ["[variables('storageAccountName')]"]
+                }    
+            ]
+        },
+        {
+            "name": "copyBlobContent",
+            "type": "Microsoft.Resources/deploymentScripts",
+            "apiVersion": "2020-10-01",
+            "location": "[resourceGroup().location]",
+            "kind": "AzurePowerShell",
+            "properties": {
+                "forceUpdateTag": "[parameters('utcValue')]",
+                "azPowerShellVersion": "6.4",
+                //"scriptContent": "param ([string]$sourceUri, [string]$destinationUri); Invoke-WebRequest https://aka.ms/downloadazcopy-v10-linux -OutFile downloadazcopy-v10-linux; tar -xvf downloadazcopy-v10-linux; cp ./azcopy_linux_amd64_*/azcopy /usr/bin/; azcopy cp $sourceUri $destinationUri",
+                "primaryScriptUri": "[parameters('deploymentScriptUri')]",
+                "arguments": "[concat(' -sourceUri ''', variables('VhdUri'), ''' -destinationUri ', '''', concat(reference(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))).primaryEndpoints.blob, variables('containerName') ,'?', listAccountSas(variables('storageAccountName'), '2021-04-01', variables('accountSasFunctionValues')).accountSasToken), '''')]",
+                "cleanupPreference": "OnSuccess",
+                "timeout": "PT15M",
+                "retentionInterval": "PT1H"
+            },
+            "dependsOn": ["[variables('storageAccountName')]"]
+        },
+        {
+            "name": "[variables('imageName')]",
+            "type": "Microsoft.Compute/images",
+            "apiVersion": "2021-07-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "storageProfile": {
+                    "osDisk": {
+                        "osType": "Windows",
+                        "osState": "Generalized",
+                        "blobUri": "[concat(reference(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))).primaryEndpoints.blob, variables('containerName'), '/', parameters('imageFileName'))]",
+                        "storageAccountType": "Standard_LRS"
+                    }
+                },
+                "hyperVGeneration": "V2"
+            },
+            "dependsOn": ["copyBlobContent"]
+        }
+    ],
+    "outputs": {
+        "imageResourceId": {
+            "type": "string",
+            "value": "[resourceId('Microsoft.Compute/Images', variables('imageName'))]"
+        }
+    }
+}

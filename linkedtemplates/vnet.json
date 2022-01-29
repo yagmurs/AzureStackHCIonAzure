@@ -1,0 +1,224 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "vNetName": {
+            "type": "string",
+            "defaultValue": "AzureStackvNet",
+            "metadata": {
+                "description": "description"
+            }
+        },
+        "vNetAddressPrefix": {
+            "type": "string",
+            "defaultValue": "10.255.254.0/23",
+            "metadata": {
+                "description": "description"
+            }
+        },
+        "location": {
+            "type": "string",
+            "defaultValue": "[resourceGroup().location]",
+            "metadata": {
+                "description": "description"
+            }
+        },
+        "managementSubnetName": {
+            "type": "string",
+            "defaultValue": "management-subnet",
+            "metadata": {
+                "description": "description"
+            }
+        },
+        "smbSubnetName": {
+            "type": "string",
+            "defaultValue": "smb-subnet",
+            "metadata": {
+                "description": "description"
+            }
+        },
+        "managementSubnetAddressPrefix": {
+            "type": "string",
+            "defaultValue": "10.255.254.0/24",
+            "metadata": {
+                "description": "description"
+            }
+        },
+        "smbSubnetAddressPrefix": {
+            "type": "string",
+            "defaultValue": "10.255.255.0/24",
+            "metadata": {
+                "description": "description"
+            }
+        },
+        "dnsServer": {
+            "type": "string",
+            "defaultValue": "usevnetdefaults",
+            "metadata": {
+                "description": "specify multiple DNS servers with commas"
+            }
+        },
+        "myIpForRdp": {
+            "type": "string",
+            "metadata": {
+                "description": "description"
+            }
+        }
+    },
+    "functions": [],
+    "variables": {
+        "dnsServersArray": "[if(equals(parameters('dnsServer'), 'usevnetdefaults'), 'null', array(if(contains(parameters('dnsServer'), ','), split(parameters('dnsServer'), ','), parameters('dnsServer'))))]",
+        "managementSubnetNsgName": "[concat(parameters('managementSubnetName'), '-nsg')]",
+        "smbSubnetNsgName": "[concat(parameters('smbSubnetName'), '-nsg')]"
+    },
+    "resources": [
+        {
+            "name": "[variables('managementSubnetNsgName')]",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2020-11-01",
+            "location": "[parameters('location')]",
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "Allow-RDP-Inbound",
+                        "properties": {
+                            "description": "Allow Rdp from trusted Ip address",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "3389",
+                            "sourceAddressPrefix": "[parameters('myIpForRdp')]",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 301,
+                            "direction": "Inbound"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[variables('smbSubnetNsgName')]",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2020-11-01",
+            "location": "[parameters('location')]",
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "Allow-Subnet-Inbound",
+                        "properties": {
+                            "description": "description",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "VirtualNetwork",
+                            "destinationAddressPrefix": "VirtualNetwork",
+                            "access": "Allow",
+                            "priority": 1001,
+                            "direction": "Inbound"
+                        }
+                    },
+                                        {
+                        "name": "Allow-Subnet-Outbound",
+                        "properties": {
+                            "description": "description",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "VirtualNetwork",
+                            "destinationAddressPrefix": "VirtualNetwork",
+                            "access": "Allow",
+                            "priority": 1001,
+                            "direction": "Outbound"
+                        }
+                    },
+                    {
+                        "name": "Allow-AzureLoadBalancer-Inbound",
+                        "properties": {
+                            "description": "description",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "AzureLoadBalancer",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 4001,
+                            "direction": "Inbound"
+                        }
+                    },
+                    {
+                        "name": "Deny-All-Inbound",
+                        "properties": {
+                            "description": "description",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Deny",
+                            "priority": 4002,
+                            "direction": "Inbound"
+                        }
+                    },
+                    {
+                        "name": "Deny-All-Outbound",
+                        "properties": {
+                            "description": "description",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Deny",
+                            "priority": 4002,
+                            "direction": "Outbound"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[parameters('vNetName')]",
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2020-11-01",
+            "location": "[parameters('location')]",
+            "tags": {
+                "displayName": "[parameters('vNetName')]"
+            },
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[parameters('vNetAddressPrefix')]"
+                    ]
+                },
+                "dhcpOptions": {
+                    "dnsServers": "[variables('dnsServersArray')]"
+                },
+                "subnets": [
+                    {
+                        "name": "[parameters('managementSubnetName')]",
+                        "properties": {
+                            "addressPrefix": "[parameters('managementSubnetAddressPrefix')]",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/networkSecurityGroups', variables('managementSubnetNsgName'))]"
+                            }
+                        }
+                    },
+                    {
+                        "name": "[parameters('smbSubnetName')]",
+                        "properties": {
+                            "addressPrefix": "[parameters('smbSubnetAddressPrefix')]",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/networkSecurityGroups', variables('smbSubnetNsgName'))]"
+                            }
+                        }
+                    }
+                ]
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('managementSubnetNsgName'))]",
+                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('smbSubnetNsgName'))]"
+            ]
+        }
+    ],
+    "outputs": {}
+}
