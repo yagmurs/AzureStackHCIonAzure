@@ -21,7 +21,7 @@
             "apiVersion": "2020-11-01",
             "location": "[resourceGroup().location]",
             "tags": {
-                "displayName": "[concat(parameters('vmName'), 'Network Interface')]"
+                "displayName": "[concat(parameters('vmName'), '-Network Interface')]"
             },
             "properties": {
                 "ipConfigurations": [
@@ -47,7 +47,7 @@
             ],
             "properties": {
                 "hardwareProfile": {
-                    "vmSize": "Standard_E16_v4"
+                    "vmSize": "Standard_E4ds_v4"
                 },
                 "osProfile": {
                     "computerName": "[parameters('vmName')]",

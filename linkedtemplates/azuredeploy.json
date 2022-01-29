@@ -42,7 +42,7 @@
             "metadata": {
                 "description": "description"
             },
-            "defaultValue": "azsh",
+            "defaultValue": "ashci",
             "maxLength": 8
         },
         "azureStackHciNodeCount": {
@@ -97,11 +97,11 @@
             }
         },
         {
-            "name": "AzureStackHci-node-deployment",
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2021-04-01",
+            "name": "[concat('AzureStackHci-node-deployment-for_', variables('azureStackHciNodePrefix'), copyIndex())]",
             "copy": {
-                "name": "[concat(variables('azureStackHciNodePrefix'), copyIndex())]",
+                "name": "multiplenodes",
                 "count": "[parameters('azureStackHciNodeCount')]"
             },
             "properties": {
