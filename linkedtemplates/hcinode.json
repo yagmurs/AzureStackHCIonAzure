@@ -25,12 +25,15 @@
             "metadata": {
                 "description": "vmSize"
             }
+        },
+        "enableHybridBenefitServerLicenses": {
+            "type": "bool"
         }
     },
     "functions": [],
     "variables": {
-        "smbNicNameSuffix": "value",
-        "managementNicNameSuffix": "value"
+        "smbNicNameSuffix": "-smb-nic",
+        "managementNicNameSuffix": "-management-nic"
     },
     "resources": [
         {
@@ -83,6 +86,7 @@
                 "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('vmName'), variables('smbNicNameSuffix')))]"
             ],
             "properties": {
+                "licenseType": "[if(bool(parameters('enableHybridBenefitServerLicenses')), 'Windows_Server', 'None')]",
                 "hardwareProfile": {
                     "vmSize": "[parameters('vmSize')]"
                 },

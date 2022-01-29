@@ -163,6 +163,9 @@
                     },
                     "adminPassword": {
                         "value": "[parameters('adminPassword')]"
+                    },
+                    "enableHybridBenefitServerLicenses": {
+                        "value": "[parameters('enableHybridBenefitServerLicenses')]"
                     }
                 }
             },
