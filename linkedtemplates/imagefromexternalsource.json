@@ -2,7 +2,7 @@
     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "vhdLocation": {
+        "sourceVhdLocation": {
             "type": "string",
             "metadata": {
                 "description": "Parent path for source image. Will be contatenated with imageFileName parameter."
@@ -35,10 +35,10 @@
             "signedExpiry": "2023-12-31T00:00:00Z"
         },
         "storageAccountName": "[uniqueString(subscription().subscriptionId, resourceGroup().name, parameters('utcValue'))]",
-        "containerName": "images",
+        "containerName": "ashci",
         "imageName": "[concat('azure-stack-hci-', parameters('imageFileName'))]",
-        "vhdLocationValidation": "[if(endsWith(parameters('vhdLocation'), '/'), substring(parameters('vhdLocation'), 0, lastIndexOf(parameters('vhdLocation'), '/')), parameters('vhdLocation'))]",
-        "VhdUri": "[concat(variables('vhdLocationValidation'), '/', parameters('imageFileName'), '.vhd')]"
+        "sourceVhdLocationValidation": "[if(endsWith(parameters('sourceVhdLocation'), '/'), substring(parameters('sourceVhdLocation'), 0, lastIndexOf(parameters('sourceVhdLocation'), '/')), parameters('sourceVhdLocation'))]",
+        "sourceVhdUri": "[concat(variables('sourceVhdLocationValidation'), '/', parameters('imageFileName'), '.vhd')]"
     },
     "resources": [
         {
@@ -71,7 +71,7 @@
                 "azPowerShellVersion": "6.4",
                 //"scriptContent": "param ([string]$sourceUri, [string]$destinationUri); Invoke-WebRequest https://aka.ms/downloadazcopy-v10-linux -OutFile downloadazcopy-v10-linux; tar -xvf downloadazcopy-v10-linux; cp ./azcopy_linux_amd64_*/azcopy /usr/bin/; azcopy cp $sourceUri $destinationUri",
                 "primaryScriptUri": "[parameters('deploymentScriptUri')]",
-                "arguments": "[concat(' -sourceUri ''', variables('VhdUri'), ''' -destinationUri ', '''', concat(reference(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))).primaryEndpoints.blob, variables('containerName') ,'?', listAccountSas(variables('storageAccountName'), '2021-04-01', variables('accountSasFunctionValues')).accountSasToken), '''')]",
+                "arguments": "[concat(' -sourceUri ''', variables('sourceVhdUri'), ''' -destinationUri ', '''', concat(reference(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))).primaryEndpoints.blob, variables('containerName') ,'?', listAccountSas(variables('storageAccountName'), '2021-04-01', variables('accountSasFunctionValues')).accountSasToken), '''')]",
                 "cleanupPreference": "OnSuccess",
                 "timeout": "PT15M",
                 "retentionInterval": "PT1H"
@@ -88,7 +88,7 @@
                     "osDisk": {
                         "osType": "Windows",
                         "osState": "Generalized",
-                        "blobUri": "[concat(reference(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))).primaryEndpoints.blob, variables('containerName'), '/', parameters('imageFileName'))]",
+                        "blobUri": "[concat(reference(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))).primaryEndpoints.blob, variables('containerName'), '/', parameters('imageFileName'), '.vhd')]",
                         "storageAccountType": "Standard_LRS"
                     }
                 },
