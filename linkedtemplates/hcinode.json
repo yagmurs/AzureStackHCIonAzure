@@ -57,14 +57,14 @@
             }
         },
         {
-            "name": "[concat(parameters('vmName'), variables('managementNicNameSuffix'))]",
+            "name": "[concat(parameters('vmName'), variables('smbNicNameSuffix'))]",
             "type": "Microsoft.Network/networkInterfaces",
             "apiVersion": "2020-11-01",
             "location": "[resourceGroup().location]",
             "properties": {
                 "ipConfigurations": [
                     {
-                        "name": "[concat('ipconfig1', variables('managementNicNameSuffix'))]",
+                        "name": "[concat('ipconfig1', variables('smbNicNameSuffix'))]",
                         "properties": {
                             "privateIPAllocationMethod": "Dynamic",
                             "subnet": {
