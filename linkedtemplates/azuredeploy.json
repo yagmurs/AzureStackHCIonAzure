@@ -1,0 +1,82 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "artifactsLocation": {
+            "type": "string",
+            "metadata": {
+                "description": "description"
+            },
+            "defaultValue": "https://raw.githubusercontent.com/Azure/AksHcionAzureVM/master"
+        },
+        "artifactsLocationSasToken": {
+            "type": "string",
+            "metadata": {
+                "description": "description"
+            }
+        },
+        "vhdLocation": {
+            "type": "string",
+             "metadata": {
+                "description": "Parent path for source image. Will be contatenated with imageFileName parameter."
+            },
+            "defaultValue": "https://azurestackhciwesteurope.blob.core.windows.net/ashci"
+        },
+        "imageFileName": {
+            "type": "string",
+            "metadata": {
+                "description": "File name for source image file. Will be contatenated with vhdLocation parameter."
+            },
+            "allowedValues": ["21h2-g2", "22h2-g2"],
+            "defaultValue": "21h2-g2"
+        },
+        "myIpForRdp": {
+            "type": "string",
+            "metadata": {
+                "description": "provide your Ip address for NSG RDP rule"
+            }
+        }
+    },
+    "functions": [],
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2021-04-01",
+            "name": "prepareGalleryImage",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(parameters('artifactsLocation'), '/linkedtemplates/imagefromexternalsource.json', parameters('artifactsLocationSasToken'))]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "artifactsLocation": {
+                        "value": "[parameters('vhdLocation')]"
+                    },
+                    "artifactsLocationSasToken": {
+                        "value": "[parameters('imageFileName')]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "vNetWithPredefinedNsg",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2021-04-01",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(parameters('artifactsLocation'), '/linkedtemplates/vnet.json', parameters('artifactsLocationSasToken'))]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "myIpForRdp": {
+                        "value": "[parameters('myIpForRdp')]"
+                    }
+                }
+            }
+        }
+    ],
+    "outputs": {}
+}
