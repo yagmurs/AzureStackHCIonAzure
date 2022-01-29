@@ -60,6 +60,13 @@
         "adminPassword": {
             "type": "securestring"
         },
+        "azureStackHciVmSize": {
+            "type": "string",
+            "metadata": {
+                "description": "description"
+            },
+            "defaultValue": "Standard_E4ds_v4"
+        },
         "activeDirectoryFqdn": {
             "type": "string",
             "defaultValue": "corp.contoso.com"        
@@ -138,6 +145,9 @@
                 "parameters": {
                     "vmName": {
                         "value": "[concat(variables('azureStackHciNodePrefix'), copyIndex())]"
+                    },
+                    "vmSize": {
+                        "value": "[parameters('azureStackHciVmSize')]"
                     },
                     "managementSubnetResourceId": {
                         "value": "[reference('vnet-with-predefined-nsg').outputs.managementSubnetResourceId.value]"
