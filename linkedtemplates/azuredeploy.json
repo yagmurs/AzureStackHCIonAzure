@@ -139,8 +139,11 @@
                     "vmName": {
                         "value": "[concat(variables('azureStackHciNodePrefix'), copyIndex())]"
                     },
-                    "subnetResourceId": {
+                    "managementSubnetResourceId": {
                         "value": "[reference('vnet-with-predefined-nsg').outputs.managementSubnetResourceId.value]"
+                    },
+                    "smbSubnetResourceId": {
+                        "value": "[reference('vnet-with-predefined-nsg').outputs.smbSubnetResourceId.value]"
                     },
                     "imageResourceId": {
                         "value": "[reference('prepare-gallery-image').outputs.imageResourceId.value]"

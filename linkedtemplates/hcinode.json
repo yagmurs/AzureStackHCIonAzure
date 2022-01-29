@@ -2,7 +2,10 @@
     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "subnetResourceId": {
+        "managementSubnetResourceId": {
+            "type": "string"
+        },
+        "smbSubnetResourceId": {
             "type": "string"
         },
         "imageResourceId": {
@@ -22,7 +25,7 @@
     "variables": {},
     "resources": [
         {
-            "name": "[concat(parameters('vmName'), '-NetworkInterface')]",
+            "name": "[concat(parameters('vmName'), '-NetworkInterface-Management')]",
             "type": "Microsoft.Network/networkInterfaces",
             "apiVersion": "2020-11-01",
             "location": "[resourceGroup().location]",
@@ -32,11 +35,35 @@
             "properties": {
                 "ipConfigurations": [
                     {
-                        "name": "ipConfig1",
+                        "name": "ipConfig1-management",
                         "properties": {
                             "privateIPAllocationMethod": "Dynamic",
+                            "primary": true,
                             "subnet": {
-                                "id": "[parameters('subnetResourceId')]"
+                                "id": "[parameters('managementSubnetResourceId')]"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[concat(parameters('vmName'), '-NetworkInterface-Smb')]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2020-11-01",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "[concat(parameters('vmName'), '-Network Interface')]"
+            },
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipConfig1-smb",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "primary": false,
+                            "subnet": {
+                                "id": "[parameters('smbSubnetResourceId')]"
                             }
                         }
                     }
@@ -49,7 +76,8 @@
             "apiVersion": "2021-07-01",
             "location": "[resourceGroup().location]",
             "dependsOn": [
-                "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('vmName'), '-NetworkInterface'))]"
+                "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('vmName'), '-NetworkInterface-Management'))]",
+                "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('vmName'), '-NetworkInterface-Smb'))]"
             ],
             "properties": {
                 "hardwareProfile": {
@@ -77,7 +105,10 @@
                 "networkProfile": {
                     "networkInterfaces": [
                         {
-                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('vmName'), '-NetworkInterface'))]"
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('vmName'), '-NetworkInterface-Management'))]"
+                        },
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('vmName'), '-NetworkInterface-Smb'))]"
                         }
                     ]
                 },
