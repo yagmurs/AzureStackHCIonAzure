@@ -185,11 +185,11 @@
         },
         "managementSubnetResourceId": {
             "type": "string",
-            "value": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('managementSubnetName'))]"
+            "value": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vNetName'), parameters('managementSubnetName'))]"
         },
         "smbSubnetResourceId": {
             "type": "string",
-            "value": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('smbSubnetName'))]"
+            "value": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vNetName'), parameters('smbSubnetName'))]"
         }
     }
 }
