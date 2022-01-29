@@ -100,6 +100,10 @@
             "name": "AzureStackHci-node-deployment",
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2021-04-01",
+            "copy": {
+                "name": "[concat(variables('azureStackHciNodePrefix'), copyIndex())]",
+                "count": "[parameters('azureStackHciNodeCount')]"
+            },
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
@@ -107,11 +111,8 @@
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
-                    "azureStackHciVmPrefix": {
-                        "value": "[variables('azureStackHciNodePrefix')]"
-                    },
-                    "azureStackHciHostCount": {
-                        "value": "[parameters('azureStackHciNodeCount')]"
+                    "vmName": {
+                        "value": "[concat(variables('azureStackHciNodePrefix'), copyIndex())]"
                     },
                     "subnetResourceId": {
                         "value": "[reference('vnet-with-predefined-nsg').outputs.managementSubnetResourceId]"

@@ -7,22 +7,21 @@
         },
         "imageResourceId": {
             "type": "string"
+        },
+        "vmName": {
+            "type": "string"
         }
     },
     "functions": [],
     "variables": {},
     "resources": [
         {
-            "name": "windowsVM1-NetworkInterface",
+            "name": "[concat(parameters('vmName'), '-NetworkInterface')]",
             "type": "Microsoft.Network/networkInterfaces",
             "apiVersion": "2020-11-01",
             "location": "[resourceGroup().location]",
-            "dependsOn": [
-                "[resourceId('Microsoft.Network/publicIPAddresses', 'windowsVM1-PublicIP')]",
-                "[resourceId('Microsoft.Network/virtualNetworks', 'windowsVM1-VirtualNetwork')]"
-            ],
             "tags": {
-                "displayName": "windowsVM1 Network Interface"
+                "displayName": "[concat(parameters('vmName'), 'Network Interface')]"
             },
             "properties": {
                 "ipConfigurations": [
@@ -39,19 +38,19 @@
             }
         },
         {
-            "name": "windowsVM1",
+            "name": "[parameters('vmName')]",
             "type": "Microsoft.Compute/virtualMachines",
             "apiVersion": "2021-07-01",
             "location": "[resourceGroup().location]",
             "dependsOn": [
-                "[resourceId('Microsoft.Network/networkInterfaces', 'windowsVM1-NetworkInterface')]"
+                "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('vmName'), '-NetworkInterface'))]"
             ],
             "properties": {
                 "hardwareProfile": {
                     "vmSize": "Standard_E16_v4"
                 },
                 "osProfile": {
-                    "computerName": "windowsVM1",
+                    "computerName": "[parameters('vmName')]",
                     "adminUsername": "adminUsername",
                     "adminPassword": "adminPassword"
                 },
@@ -60,7 +59,7 @@
                         "id": "[parameters('imageResourceId')]"
                     },
                     "osDisk": {
-                        "name": "windowsVM1OSDisk",
+                        "name": "[concat(parameters('vmName'), '-OsDisk')]",
                         "caching": "ReadWrite",
                         "diskSizeGB": 128,
                         "createOption": "FromImage",
@@ -72,7 +71,7 @@
                 "networkProfile": {
                     "networkInterfaces": [
                         {
-                            "id": "[resourceId('Microsoft.Network/networkInterfaces', 'windowsVM1-NetworkInterface')]"
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('vmName'), '-NetworkInterface'))]"
                         }
                     ]
                 },

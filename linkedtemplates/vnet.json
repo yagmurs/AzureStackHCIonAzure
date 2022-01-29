@@ -104,7 +104,7 @@
             "properties": {
                 "securityRules": [
                     {
-                        "name": "Allow-Subnet-Outbound",
+                        "name": "Allow-Vnet-Outbound",
                         "properties": {
                             "description": "description",
                             "protocol": "*",
