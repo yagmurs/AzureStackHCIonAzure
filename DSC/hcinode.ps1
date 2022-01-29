@@ -1,4 +1,4 @@
-configuration hciconfig
+configuration hcinode
 {
     Import-DscResource -ModuleName 'PSDesiredStateConfiguration'
 
@@ -18,6 +18,3 @@ configuration hciconfig
         }
     }
 }
-
-
-
