@@ -112,6 +112,12 @@
                     },
                     "azureStackHciHostCount": {
                         "value": "[parameters('azureStackHciNodeCount')]"
+                    },
+                    "subnetResourceId": {
+                        "value": "[reference('vNetWithPredefinedNsg').outputs.managementSubnetResourceId]"
+                    },
+                    "imageResourceId": {
+                        "value": "[reference('prepareGalleryImage').outputs.imageResourceId]"
                     }
                 }
             },
