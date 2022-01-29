@@ -104,20 +104,6 @@
             "properties": {
                 "securityRules": [
                     {
-                        "name": "Allow-Subnet-Inbound",
-                        "properties": {
-                            "description": "description",
-                            "protocol": "*",
-                            "sourcePortRange": "*",
-                            "destinationPortRange": "*",
-                            "sourceAddressPrefix": "VirtualNetwork",
-                            "destinationAddressPrefix": "VirtualNetwork",
-                            "access": "Allow",
-                            "priority": 1001,
-                            "direction": "Inbound"
-                        }
-                    },
-                                        {
                         "name": "Allow-Subnet-Outbound",
                         "properties": {
                             "description": "description",
@@ -129,34 +115,6 @@
                             "access": "Allow",
                             "priority": 1001,
                             "direction": "Outbound"
-                        }
-                    },
-                    {
-                        "name": "Allow-AzureLoadBalancer-Inbound",
-                        "properties": {
-                            "description": "description",
-                            "protocol": "*",
-                            "sourcePortRange": "*",
-                            "destinationPortRange": "*",
-                            "sourceAddressPrefix": "AzureLoadBalancer",
-                            "destinationAddressPrefix": "*",
-                            "access": "Allow",
-                            "priority": 4001,
-                            "direction": "Inbound"
-                        }
-                    },
-                    {
-                        "name": "Deny-All-Inbound",
-                        "properties": {
-                            "description": "description",
-                            "protocol": "*",
-                            "sourcePortRange": "*",
-                            "destinationPortRange": "*",
-                            "sourceAddressPrefix": "*",
-                            "destinationAddressPrefix": "*",
-                            "access": "Deny",
-                            "priority": 4002,
-                            "direction": "Inbound"
                         }
                     },
                     {
