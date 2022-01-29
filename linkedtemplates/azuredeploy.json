@@ -2,15 +2,15 @@
     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "artifactsLocation": {
+        "_artifactsLocation": {
             "type": "string",
             "metadata": {
                 "description": "description"
             },
             "defaultValue": "https://raw.githubusercontent.com/yagmurs/AzureStackHCIonAzure/master"
         },
-        "artifactsLocationSasToken": {
-            "type": "string",
+        "_artifactsLocationSasToken": {
+            "type": "securestring",
             "metadata": {
                 "description": "description"
             },
@@ -48,7 +48,7 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[concat(parameters('artifactsLocation'), '/linkedtemplates/imagefromexternalsource.json', parameters('artifactsLocationSasToken'))]",
+                    "uri": "[concat(parameters('_artifactsLocation'), '/linkedtemplates/imagefromexternalsource.json', parameters('_artifactsLocationSasToken'))]",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
@@ -68,12 +68,18 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[concat(parameters('artifactsLocation'), '/linkedtemplates/vnet.json', parameters('artifactsLocationSasToken'))]",
+                    "uri": "[concat(parameters('_artifactsLocation'), '/linkedtemplates/vnet.json', parameters('_artifactsLocationSasToken'))]",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
                     "myIpForRdp": {
                         "value": "[parameters('myIpForRdp')]"
+                    },
+                    "_artifactsLocation": {
+                        "value": "[parameters('_artifactsLocation')]"
+                    },
+                    "_artifactsLocationSasToken": {
+                        "value": "[parameters('_artifactsLocationSasToken')]"
                     }
                 }
             }
