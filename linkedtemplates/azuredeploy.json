@@ -51,14 +51,7 @@
                     "uri": "[concat(parameters('_artifactsLocation'), '/linkedtemplates/imagefromexternalsource.json', parameters('_artifactsLocationSasToken'))]",
                     "contentVersion": "1.0.0.0"
                 },
-                "parameters": {
-                    "artifactsLocation": {
-                        "value": "[parameters('vhdLocation')]"
-                    },
-                    "artifactsLocationSasToken": {
-                        "value": "[parameters('imageFileName')]"
-                    }
-                }
+                "parameters": {}
             }
         },
         {
@@ -74,12 +67,6 @@
                 "parameters": {
                     "myIpForRdp": {
                         "value": "[parameters('myIpForRdp')]"
-                    },
-                    "_artifactsLocation": {
-                        "value": "[parameters('_artifactsLocation')]"
-                    },
-                    "_artifactsLocationSasToken": {
-                        "value": "[parameters('_artifactsLocationSasToken')]"
                     }
                 }
             }
