@@ -7,13 +7,14 @@
             "metadata": {
                 "description": "description"
             },
-            "defaultValue": "https://raw.githubusercontent.com/Azure/AksHcionAzureVM/master"
+            "defaultValue": "https://raw.githubusercontent.com/yagmurs/AksHcionAzureVM/master"
         },
         "artifactsLocationSasToken": {
             "type": "string",
             "metadata": {
                 "description": "description"
-            }
+            },
+            "defaultValue": ""
         },
         "vhdLocation": {
             "type": "string",
