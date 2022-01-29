@@ -231,7 +231,7 @@
                     "condition": "[bool(parameters('joinNodesToActiveDirectory'))]",
                     "type": "Microsoft.Compute/virtualMachines/extensions",
                     "apiVersion": "2021-03-01",
-                    "name": "[concat(parameters('vmName'), 'joindomain')]",
+                    "name": "[concat(parameters('vmName'), '/joindomain')]",
                     "location": "[resourceGroup().location]",
                     "properties": {
                         "publisher": "Microsoft.Compute",
@@ -239,11 +239,11 @@
                         "typeHandlerVersion": "1.3",
                         "autoUpgradeMinorVersion": true,
                         "settings": {
-                        "name": "[parameters('activeDirectoryFqdn')]",
-                        "ouPath": "[parameters('ouPath')]",
-                        "user": "[format('{0}\\{1}', parameters('activeDirectoryFqdn'), parameters('adminUsername'))]",
-                        "restart": true,
-                        "options": "[parameters('domainJoinOptions')]"
+                            "name": "[parameters('activeDirectoryFqdn')]",
+                            "ouPath": "[parameters('ouPath')]",
+                            "user": "[format('{0}\\{1}', parameters('activeDirectoryFqdn'), parameters('adminUsername'))]",
+                            "restart": true,
+                            "options": "[parameters('domainJoinOptions')]"
                     },
                     "protectedSettings": {
                         "Password": "[parameters('adminPassword')]"
