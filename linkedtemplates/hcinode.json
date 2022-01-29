@@ -26,6 +26,34 @@
                 "description": "vmSize"
             }
         },
+        "dataDiskSizeinGB": {
+            "type": "int",
+            "allowedValues": [
+                64,
+                128,
+                256,
+                512,
+                1024,
+                2048
+            ],
+            "defaultValue": 256
+        },
+        "storageType": {
+            "type": "string",
+            "allowedValues": [
+                "Premium_LRS",
+                "Standard_LRS",
+                "StandardSSD_LRS",
+                "UltraSSD_LRS"
+            ],
+            "defaultValue": "Premium_LRS"
+        },
+        "numberOfDataDisks": {
+            "type": "int",
+            "minValue": 3,
+            "maxValue": 12,
+            "defaultValue": 4
+        },
         "enableHybridBenefitServerLicenses": {
             "type": "bool"
         }
@@ -107,7 +135,23 @@
                         "managedDisk": {
                             "storageAccountType": "Premium_LRS"
                         }
-                    }
+                    },
+                    "copy": [
+                        {
+                            "name": "dataDisks",
+                            "count": "[parameters('numberOfDataDisks')]",
+                            "input": {
+                                "name": "[concat(parameters('vmName'), '-datadisk-', copyIndex('dataDisks'))]",
+                                "lun": "[copyIndex('dataDisks')]",
+                                "createOption": "Empty",
+                                "diskSizeGB": "[parameters('dataDiskSizeinGB')]",
+                                "caching": "None",
+                                "managedDisk": {
+                                    "storageAccountType": "[parameters('storageType')]"
+                                }
+                            }
+                        }
+                    ]
                 },
                 "networkProfile": {
                     "networkInterfaces": [

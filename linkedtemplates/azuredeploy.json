@@ -67,6 +67,34 @@
             },
             "defaultValue": "Standard_E4ds_v4"
         },
+        "dataDiskSizeinGB": {
+            "type": "int",
+            "allowedValues": [
+                64,
+                128,
+                256,
+                512,
+                1024,
+                2048
+            ],
+            "defaultValue": 256
+        },
+        "storageType": {
+            "type": "string",
+            "allowedValues": [
+                "Premium_LRS",
+                "Standard_LRS",
+                "StandardSSD_LRS",
+                "UltraSSD_LRS"
+            ],
+            "defaultValue": "Premium_LRS"
+        },
+        "numberOfDataDisks": {
+            "type": "int",
+            "minValue": 4,
+            "maxValue": 12,
+            "defaultValue": 4
+        },
         "activeDirectoryFqdn": {
             "type": "string",
             "defaultValue": "corp.contoso.com"        
@@ -163,6 +191,15 @@
                     },
                     "adminPassword": {
                         "value": "[parameters('adminPassword')]"
+                    },
+                    "numberOfDataDisks": {
+                        "value": "[parameters('numberOfDataDisks')]"
+                    },
+                    "dataDiskSizeinGB": {
+                        "value": "[parameters('dataDiskSizeinGB')]"
+                    },
+                    "storageType": {
+                        "value": "[parameters('storageType')]"
                     },
                     "enableHybridBenefitServerLicenses": {
                         "value": "[parameters('enableHybridBenefitServerLicenses')]"
