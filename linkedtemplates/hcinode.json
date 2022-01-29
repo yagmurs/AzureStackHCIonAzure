@@ -155,7 +155,7 @@
                         "id": "[parameters('imageResourceId')]"
                     },
                     "osDisk": {
-                        "name": "[concat(parameters('vmName'), '-OsDisk')]",
+                        "name": "[concat(parameters('vmName'), '-osdisk')]",
                         "caching": "ReadWrite",
                         "diskSizeGB": 128,
                         "createOption": "FromImage",
@@ -244,14 +244,14 @@
                             "user": "[format('{0}\\{1}', parameters('activeDirectoryFqdn'), parameters('adminUsername'))]",
                             "restart": true,
                             "options": "[parameters('domainJoinOptions')]"
-                    },
-                    "protectedSettings": {
-                        "Password": "[parameters('adminPassword')]"
-                    }
-                },
-                    "dependsOn": [
-                        "[resourceId('Microsoft.Compute/virtualMachines', parameters('vmName'))]"
-                    ]
+                        },
+                        "protectedSettings": {
+                            "Password": "[parameters('adminPassword')]"
+                        },
+                        "dependsOn": [
+                            "[resourceId('Microsoft.Compute/virtualMachines', parameters('vmName'))]"
+                        ]
+                    }   
                 }
             ]
         }
