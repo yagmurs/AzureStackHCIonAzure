@@ -45,7 +45,7 @@
             "defaultValue": "ashci",
             "maxLength": 8
         },
-        "azureStackHciNodeCount": {
+        "numberOfAzureStackHciNodes": {
             "type": "int",
             "metadata": {
                 "description": "description"
@@ -60,6 +60,14 @@
         "adminPassword": {
             "type": "securestring"
         },
+        "activeDirectoryFqdn": {
+            "type": "string",
+            "defaultValue": "corp.contoso.com"        
+        },
+        "joinNodesToActiveDirectory": {
+            "type": "bool",
+            "defaultValue": false
+        },
         "azureStackHciVmSize": {
             "type": "string",
             "metadata": {
@@ -67,7 +75,7 @@
             },
             "defaultValue": "Standard_E4ds_v4"
         },
-        "dataDiskSizeinGB": {
+        "dataDiskSizeInGB": {
             "type": "int",
             "allowedValues": [
                 64,
@@ -94,10 +102,6 @@
             "minValue": 4,
             "maxValue": 12,
             "defaultValue": 4
-        },
-        "activeDirectoryFqdn": {
-            "type": "string",
-            "defaultValue": "corp.contoso.com"        
         },
         "installAdminCenterOnDc": {
             "type": "bool",
@@ -162,7 +166,7 @@
             "name": "[concat('AzureStackHci-node-deployment-', variables('azureStackHciNodePrefix'), copyIndex())]",
             "copy": {
                 "name": "multiplenodes",
-                "count": "[parameters('azureStackHciNodeCount')]"
+                "count": "[parameters('numberOfAzureStackHciNodes')]"
             },
             "properties": {
                 "mode": "Incremental",
@@ -171,6 +175,12 @@
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
+                    "_artifactsLocation": {
+                        "value": "[parameters('_artifactsLocation')]"
+                    },
+                    "_artifactsLocationSasToken": {
+                        "value": "[parameters('_artifactsLocationSasToken')]"
+                    },
                     "vmName": {
                         "value": "[concat(variables('azureStackHciNodePrefix'), copyIndex())]"
                     },
@@ -192,10 +202,16 @@
                     "adminPassword": {
                         "value": "[parameters('adminPassword')]"
                     },
+                    "activeDirectoryFqdn": {
+                        "value": "[parameters('activeDirectoryFqdn')]"
+                    },
+                    "joinNodesToActiveDirectory": {
+                        "value": "[parameters('joinNodesToActiveDirectory')]"
+                    },
                     "numberOfDataDisks": {
                         "value": "[parameters('numberOfDataDisks')]"
                     },
-                    "dataDiskSizeinGB": {
+                    "dataDiskSizeInGB": {
                         "value": "[parameters('dataDiskSizeinGB')]"
                     },
                     "storageType": {
