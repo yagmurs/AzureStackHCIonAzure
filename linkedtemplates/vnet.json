@@ -178,5 +178,18 @@
             ]
         }
     ],
-    "outputs": {}
+    "outputs": {
+        "vNetResourceId": {
+            "type": "string",
+            "value": "[resourceId('Microsoft.Network/virtualNetworks', parameters('vNetName'))]"
+        },
+        "managementSubnetResourceId": {
+            "type": "string",
+            "value": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('managementSubnetName'))]"
+        },
+        "smbSubnetResourceId": {
+            "type": "string",
+            "value": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('smbSubnetName'))]"
+        }
+    }
 }

@@ -36,10 +36,28 @@
             "metadata": {
                 "description": "provide your Ip address for NSG RDP rule"
             }
+        },
+        "azureStackHciNodePrefix": {
+            "type": "string",
+            "metadata": {
+                "description": "description"
+            },
+            "defaultValue": "azsh",
+            "maxLength": 8
+        },
+        "azureStackHciNodeCount": {
+            "type": "int",
+            "metadata": {
+                "description": "description"
+            },
+            "defaultValue": 2,
+            "maxValue": 16
         }
     },
     "functions": [],
-    "variables": {},
+    "variables": {
+        "azureStackHciNodePrefix": "[concat(parameters('azureStackHciNodePrefix'), '-')]"
+    },
     "resources": [
         {
             "type": "Microsoft.Resources/deployments",
@@ -77,7 +95,48 @@
                     }
                 }
             }
+        },
+        {
+            "name": "Azure Stack Hci Nodes deployment",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2021-04-01",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(parameters('_artifactsLocation'), '/linkedtemplates/hcinode.json', parameters('_artifactsLocationSasToken'))]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "azureStackHciVmPrefix": {
+                        "value": "[variables('azureStackHciNodePrefix')]"
+                    },
+                    "azureStackHciHostCount": {
+                        "value": "[parameters('azureStackHciNodeCount')]"
+                    }
+                }
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Resources/deployments', 'prepareGalleryImage')]",
+                "[resourceId('Microsoft.Resources/deployments', 'vNetWithPredefinedNsg')]"
+            ]
         }
     ],
-    "outputs": {}
+    "outputs": {
+        "outputFromLinkedTemplate-prepareGalleryImage": {
+            "type": "string",
+            "value": "[reference('prepareGalleryImage').outputs.imageResourceId]"
+        },
+        "outputFromLinkedTemplate-vNetWithPredefinedNsg-vnetResourceId": {
+            "type": "string",
+            "value": "[reference('vNetWithPredefinedNsg').outputs.vnetResourceId]"
+        },
+        "outputFromLinkedTemplate-vNetWithPredefinedNsg-managementSubnetResourceId": {
+            "type": "string",
+            "value": "[reference('vNetWithPredefinedNsg').outputs.managementSubnetResourceId]"
+        },
+        "outputFromLinkedTemplate-vNetWithPredefinedNsg-smbSubnetResourceId": {
+            "type": "string",
+            "value": "[reference('vNetWithPredefinedNsg').outputs.smbSubnetResourceId]"
+        }
+    }
 }
