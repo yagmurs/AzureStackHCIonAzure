@@ -223,9 +223,14 @@
                                 "script": "hcinode.ps1",
                                 "function": "hcinode"
                             },
-                            "configurationUrlSasToken": "[parameters('_artifactsLocationSasToken')]"
+                            "privacy": {
+                                "dataCollection": "enable"
+                            }
                         },
-                        "protectedSettings": {}
+                        "protectedSettings": {
+                            "configurationUrlSasToken": "[parameters('_artifactsLocationSasToken')]"
+                            //"configurationDataUrlSasToken": ""
+                        }
                     }
                 },
                 {
