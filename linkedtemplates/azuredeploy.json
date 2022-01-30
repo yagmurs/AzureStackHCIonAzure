@@ -99,7 +99,7 @@
         },
         "numberOfDataDisks": {
             "type": "int",
-            "minValue": 4,
+            "minValue": 3,
             "maxValue": 12,
             "defaultValue": 4
         },
@@ -146,7 +146,7 @@
                         "value": "[parameters('_artifactsLocationSasToken')]"
                     },
                     "vmName": {
-                        "value": "[concat(variables('azureStackHciNodePrefix'), copyIndex())]"
+                        "value": "dc1"
                     },
                     "managementSubnetResourceId": {
                         "value": "[reference('vnet-with-predefined-nsg').outputs.managementSubnetResourceId.value]"

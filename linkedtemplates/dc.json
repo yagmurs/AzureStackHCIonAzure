@@ -28,7 +28,7 @@
             "metadata": {
                 "description": "vmSize"
             },
-            "defaultValue": "Standard_D2as_v5"
+            "defaultValue": "Standard_B2ms"
         },
         "dataDiskSizeInGB": {
             "type": "int",
