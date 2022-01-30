@@ -119,7 +119,7 @@
         },
         "utcValue": {
             "type": "string",
-            "defaultValue": "[utcNow()]"
+            "defaultValue": "1"
         }
     },
     "functions": [],
