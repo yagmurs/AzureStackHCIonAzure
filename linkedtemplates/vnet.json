@@ -80,12 +80,18 @@
             "properties": {
                 "securityRules": [
                     {
-                        "name": "Allow-RDP-Inbound",
+                        "name": "Allow-Management-Inbound",
                         "properties": {
-                            "description": "Allow Rdp from trusted Ip address",
+                            "description": "Allow Management traffic from trusted Ip address",
                             "protocol": "*",
                             "sourcePortRange": "*",
-                            "destinationPortRange": "3389",
+                            "destinationPortRanges": [
+                                "80",
+                                "443",
+                                "3389",
+                                "5985",
+                                "5986"
+                            ],
                             "sourceAddressPrefix": "[parameters('myIpForRdp')]",
                             "destinationAddressPrefix": "*",
                             "access": "Allow",
