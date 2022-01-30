@@ -4,7 +4,8 @@ configuration hcinode
 
     node localhost
     {
-        LocalConfigurationManager {
+        LocalConfigurationManager 
+        {
             RebootNodeIfNeeded = $true
             ActionAfterReboot  = 'ContinueConfiguration'
             ConfigurationMode = 'ApplyAndAutoCorrect'
