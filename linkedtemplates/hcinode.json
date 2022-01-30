@@ -217,9 +217,13 @@
                         "typeHandlerVersion": "2.9",
                         "autoUpgradeMinorVersion": true,
                         "settings": {
-                            "modulesUrl": "[concat(parameters('_artifactsLocation'), '/DSC/hcinode.zip')]",
-                            "sasToken": "[parameters('_artifactsLocationSasToken')]",
-                            "configurationFunction": "hcinode.ps1\\hcinode"
+                            "wmfVersion": "latest",
+                            "configuration": {
+                                "url": "[concat(parameters('_artifactsLocation'), '/DSC/hcinode.zip')]",
+                                "script": "hcinode.ps1",
+                                "function": "hcinode"
+                            },
+                            "configurationUrlSasToken": "[parameters('_artifactsLocationSasToken')]"
                         },
                         "protectedSettings": {}
                     }
