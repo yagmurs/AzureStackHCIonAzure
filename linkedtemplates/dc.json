@@ -1,0 +1,184 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "_artifactsLocation": {
+            "type": "string"
+        },
+        "_artifactsLocationSasToken": {
+            "type": "securestring"
+        },
+        "managementSubnetResourceId": {
+            "type": "string"
+        },
+        "vmName": {
+            "type": "string"
+        },
+        "adminUsername": {
+            "type": "string"
+        },
+        "adminPassword": {
+            "type": "securestring"
+        },
+        "activeDirectoryFqdn": {
+            "type": "string"
+        },
+        "vmSize": {
+            "type": "string",
+            "metadata": {
+                "description": "vmSize"
+            },
+            "defaultValue": "Standard_D2as_v5"
+        },
+        "dataDiskSizeInGB": {
+            "type": "int",
+            "allowedValues": [
+                16,
+                32,
+                64,
+                128
+            ],
+            "defaultValue": 32
+        },
+        "storageType": {
+            "type": "string",
+            "allowedValues": [
+                "Premium_LRS",
+                "Standard_LRS",
+                "StandardSSD_LRS",
+                "UltraSSD_LRS"
+            ],
+            "defaultValue": "Standard_LRS"
+        },
+        "enableHybridBenefitServerLicenses": {
+            "type": "bool"
+        }
+    },
+    "functions": [],
+    "variables": {
+        "managementNicNameSuffix": "-management-nic"
+    },
+    "resources": [
+        {
+            "name": "[concat(parameters('vmName'), variables('managementNicNameSuffix'))]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2020-11-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "[concat('ipconfig1', variables('managementNicNameSuffix'))]",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "subnet": {
+                                "id": "[parameters('managementSubnetResourceId')]"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+                {
+            "name": "[parameters('vmName')]",
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2021-07-01",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('vmName'), variables('managementNicNameSuffix')))]"
+            ],
+            "properties": {
+                "licenseType": "[if(bool(parameters('enableHybridBenefitServerLicenses')), 'Windows_Server', 'None')]",
+                "hardwareProfile": {
+                    "vmSize": "[parameters('vmSize')]"
+                },
+                "osProfile": {
+                    "computerName": "[parameters('vmName')]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "adminPassword": "[parameters('adminPassword')]"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "MicrosoftWindowsServer",
+                        "offer": "WindowsServer",
+                        "sku": "2022-datacenter-azure-edition-smalldisk",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "name": "[concat(parameters('vmName'), '-osdisk')]",
+                        "caching": "ReadWrite",
+                        "diskSizeGB": 128,
+                        "createOption": "FromImage",
+                        "managedDisk": {
+                            "storageAccountType": "Premium_LRS"
+                        },
+                        "osType": "Windows"
+                    },
+                    "dataDisks": [
+                        {
+                            "createOption": "Empty",
+                            "lun": 0,
+                            "caching": "ReadOnly",
+                            "diskSizeGB": "[parameters('dataDiskSizeInGB')]",
+                            "managedDisk": {
+                                "storageAccountType": "[parameters('storageType')]"
+                            }
+                        }
+                    ]
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('vmName'), variables('managementNicNameSuffix')))]"
+                        }
+                    ]
+                },
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": true
+                    }
+                }
+            },
+            "resources": [
+                {
+                    "name": "[concat(parameters('vmName'), '/domainsetup')]",
+                    "type": "Microsoft.Compute/virtualMachines/extensions",
+                    "apiVersion": "2021-03-01",
+                    "location": "[resourceGroup().location]",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Compute/virtualMachines', parameters('vmName'))]"
+                    ],
+                    "properties": {
+                        "publisher": "Microsoft.Powershell",
+                        "type": "DSC",
+                        "typeHandlerVersion": "2.9",
+                        "autoUpgradeMinorVersion": true,
+                        "settings": {
+                            "wmfVersion": "latest",
+                            "configuration": {
+                                "url": "[concat(parameters('_artifactsLocation'), '/DSC/dc.zip')]",
+                                "script": "dc.ps1",
+                                "function": "domainsetup"
+                            },
+                            "privacy": {
+                                "dataCollection": "enable"
+                            },
+                            "configurationArguments": {
+                                "domainname": "[parameters('activeDirectoryFqdn')]"
+                            }
+                        },
+                        "protectedSettings": {
+                            "configurationUrlSasToken": "[parameters('_artifactsLocationSasToken')]",
+                            "configurationArguments": {
+                                "domainCreds": {
+                                    "userName": "[parameters('adminUsername')]",
+                                    "password": "[parameters('adminPassword')]"
+                                }
+                            }
+                        }
+                    }
+                }
+            ]
+        }
+    ],
+    "outputs": {}
+}

@@ -160,7 +160,7 @@
                         "diskSizeGB": 128,
                         "createOption": "FromImage",
                         "managedDisk": {
-                            "storageAccountType": "Premium_LRS"
+                            "storageAccountType": "[parameters('storageType')]"
                         }
                     },
                     "copy": [
