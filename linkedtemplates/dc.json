@@ -141,7 +141,7 @@
             },
             "resources": [
                 {
-                    "name": "[concat(parameters('vmName'), '/domainsetup')]",
+                    "name": "[concat(parameters('vmName'), '/DCPromo')]",
                     "type": "Microsoft.Compute/virtualMachines/extensions",
                     "apiVersion": "2021-03-01",
                     "location": "[resourceGroup().location]",
