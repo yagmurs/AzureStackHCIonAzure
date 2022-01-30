@@ -93,12 +93,12 @@
                                 "id": "[parameters('managementSubnetResourceId')]"
                             },
                             "publicIPAddress": {
-                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', concat(parameters('vmName'), 'pip'))]"
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', concat(parameters('vmName'), '-pip'))]"
                             }
                         }
                     }
                 ]
-            },
+            }
             
         },
                 {
