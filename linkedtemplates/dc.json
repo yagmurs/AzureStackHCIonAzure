@@ -64,14 +64,14 @@
     },
     "resources": [
         {
-            "name": "[concat(parameters('vmName'), 'pip')]",
+            "name": "[concat(parameters('vmName'), '-pip')]",
             "type": "Microsoft.Network/publicIPAddresses",
             "apiVersion": "2020-11-01",
             "location": "[resourceGroup().location]",
             "properties": {
                 "publicIPAllocationMethod": "Dynamic",
                 "dnsSettings": {
-                    "domainNameLabel": "[uniqueString(subscription().subscriptionId, resourceGroup().name, parameters('utcValue'))]"
+                    "domainNameLabel": "[toLower(uniqueString(subscription().subscriptionId, resourceGroup().name, parameters('utcValue')))]"
                 }
             }
         },
@@ -80,6 +80,9 @@
             "type": "Microsoft.Network/networkInterfaces",
             "apiVersion": "2020-11-01",
             "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses', concat(parameters('vmName'), '-pip'))]"
+            ],
             "properties": {
                 "ipConfigurations": [
                     {
@@ -95,7 +98,8 @@
                         }
                     }
                 ]
-            }
+            },
+            
         },
                 {
             "name": "[parameters('vmName')]",
