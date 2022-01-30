@@ -52,6 +52,10 @@
         },
         "enableHybridBenefitServerLicenses": {
             "type": "bool"
+        },
+        "utcValue": {
+            "type": "string",
+            "defaultValue": "[utcNow()]"
         }
     },
     "functions": [],
@@ -59,6 +63,18 @@
         "managementNicNameSuffix": "-management-nic"
     },
     "resources": [
+        {
+            "name": "[concat(parameters('vmName'), 'pip')]",
+            "type": "Microsoft.Network/publicIPAddresses",
+            "apiVersion": "2020-11-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "publicIPAllocationMethod": "Dynamic",
+                "dnsSettings": {
+                    "domainNameLabel": "[uniqueString(subscription().subscriptionId, resourceGroup().name, parameters('utcValue'))]"
+                }
+            }
+        },
         {
             "name": "[concat(parameters('vmName'), variables('managementNicNameSuffix'))]",
             "type": "Microsoft.Network/networkInterfaces",
@@ -72,6 +88,9 @@
                             "privateIPAllocationMethod": "Static",
                             "subnet": {
                                 "id": "[parameters('managementSubnetResourceId')]"
+                            },
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', concat(parameters('vmName'), 'pip'))]"
                             }
                         }
                     }
