@@ -66,7 +66,7 @@
         },
         "joinNodesToActiveDirectory": {
             "type": "bool",
-            "defaultValue": false
+            "defaultValue": true
         },
         "azureStackHciVmSize": {
             "type": "string",
@@ -130,7 +130,6 @@
     },
     "resources": [
         {
-
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2021-04-01",
             "name": "setup-dc",
@@ -173,6 +172,27 @@
                     },
                     "utcValue": {
                         "value": "[parameters('utcValue')]"
+                    }
+                }
+            }
+        },
+        {
+            "condition": "[bool(parameters('installAdminCenterOnDc'))]",
+            "name": "enable-wac-extension-on-dc",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2021-04-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Resources/deployments', 'setup-dc')]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(parameters('_artifactsLocation'), '/linkedtemplates/wac.json', parameters('_artifactsLocationSasToken'))]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "vmName": {
+                        "value": "[variables('dcVMName')]"
                     }
                 }
             }

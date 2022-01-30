@@ -1,0 +1,64 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "vmName": {
+            "type": "String"
+        },
+        "location": {
+            "type": "String",
+            "defaultValue": "[resourceGroup().location]"
+        },
+        "extensionName": {
+            "type": "String",
+            "defaultValue": "AdminCenter"
+        },
+        "extensionPublisher": {
+            "type": "String",
+            "defaultValue": "Microsoft.AdminCenter"
+        },
+        "extensionType": {
+            "type": "String",
+            "defaultValue": "AdminCenter"
+        },
+        "extensionVersion": {
+            "type": "String",
+            "defaultValue": "0.0"
+        },
+        "port": {
+            "type": "String",
+            "defaultValue": "443"
+        },
+        "salt": {
+            "type": "String",
+            "defaultValue": "[utcNow()]"
+        }
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "apiVersion": "2018-10-01",
+            "name": "[concat( parameters('vmName'), '/' , parameters('extensionName') )]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "publisher": "[parameters('extensionPublisher')]",
+                "type": "[parameters('extensionType')]",
+                "typeHandlerVersion": "[parameters('extensionVersion')]",
+                "autoUpgradeMinorVersion": true,
+                "settings": {
+                    "port": "[parameters('port')]",
+                    "salt": "[parameters('salt')]",
+                    "cspFrameAncestors": [
+                        "https://portal.azure.com",
+                        "https://*.hosting.portal.azure.net",
+                        "https://localhost:1340"
+                    ],
+                    "corsOrigins": [
+                        "https://portal.azure.com",
+                        "https://waconazure.com"
+                    ]
+                }
+            }
+        }
+    ]
+}
