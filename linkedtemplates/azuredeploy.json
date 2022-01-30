@@ -274,6 +274,30 @@
             "dependsOn": [
                 "[resourceId('Microsoft.Resources/deployments', 'prepare-gallery-image')]",
                 "[resourceId('Microsoft.Resources/deployments', 'vnet-with-predefined-nsg')]",
+                "[resourceId('Microsoft.Resources/deployments', 'setup-dc')]",
+                "[resourceId('Microsoft.Resources/deployments', 'set-vnet-dnsservers')]"
+            ]
+        },
+        {
+            "name": "set-vnet-dnsservers",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2021-04-01",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(parameters('_artifactsLocation'), '/linkedtemplates/vnet.json', parameters('_artifactsLocationSasToken'))]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "myIpForRdp": {
+                        "value": "[parameters('myIpForRdp')]"
+                    },
+                    "dnsServer": {
+                        "value": "[reference('setup-dc').outputs.dcIpAddress.value]"
+                    }
+                }
+            },
+            "dependsOn": [
                 "[resourceId('Microsoft.Resources/deployments', 'setup-dc')]"
             ]
         }

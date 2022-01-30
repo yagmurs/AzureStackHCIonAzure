@@ -69,7 +69,7 @@
                     {
                         "name": "[concat('ipconfig1', variables('managementNicNameSuffix'))]",
                         "properties": {
-                            "privateIPAllocationMethod": "Dynamic",
+                            "privateIPAllocationMethod": "Static",
                             "subnet": {
                                 "id": "[parameters('managementSubnetResourceId')]"
                             }
@@ -180,5 +180,10 @@
             ]
         }
     ],
-    "outputs": {}
+    "outputs": {
+        "dcIpAddress": {
+            "type": "string",
+            "value": "[reference(concat(parameters('vmName'), variables('managementNicNameSuffix'))).ipConfigurations[0].properties.privateIPAddress]"
+        }
+    }
 }
