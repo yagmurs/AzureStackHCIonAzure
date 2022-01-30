@@ -40,6 +40,10 @@
             ],
             "defaultValue": "Standard_LRS"
         },
+        "imageSku": {
+            "type": "string",
+            "defaultValue": "2022-datacenter-azure-edition-smalldisk" // "2022-datacenter-azure-edition-core-smalldisk"
+        },
         "enableHybridBenefitServerLicenses": {
             "type": "bool"
         },
@@ -91,7 +95,7 @@
             }
             
         },
-                {
+        {
             "name": "[parameters('vmName')]",
             "type": "Microsoft.Compute/virtualMachines",
             "apiVersion": "2021-07-01",
@@ -113,7 +117,7 @@
                     "imageReference": {
                         "publisher": "MicrosoftWindowsServer",
                         "offer": "WindowsServer",
-                        "sku": "2022-datacenter-azure-edition-smalldisk",
+                        "sku": "[parameters('imageSku')]",
                         "version": "latest"
                     },
                     "osDisk": {

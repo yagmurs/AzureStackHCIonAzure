@@ -128,8 +128,9 @@
     "functions": [],
     "variables": {
         "azureStackHciNodePrefix": "[concat(parameters('azureStackHciNodePrefix'), '-')]",
-        "dcVMSize": "Standard_B2ms",
-        "dcVMName": "dc1"
+        "dcVMSize": "Standard_B1s",
+        "dcVMName": "dc1",
+        "dcImageSku": "2022-datacenter-azure-edition-core-smalldisk" // "2022-datacenter-azure-edition-smalldisk"
     },
     "resources": [
         {
@@ -154,6 +155,9 @@
                     },
                     "vmSize": {
                         "value": "[variables('dcVMSize')]"
+                    },
+                    "imageSku": {
+                        "value": "[variables('dcImageSku')]"
                     },
                     "managementSubnetResourceId": {
                         "value": "[reference('vnet-with-predefined-nsg').outputs.managementSubnetResourceId.value]"
