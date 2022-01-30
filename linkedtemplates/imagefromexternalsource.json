@@ -9,7 +9,7 @@
             },
             "defaultValue": "https://azurestackhciwesteurope.blob.core.windows.net/ashci"
         },
-        "utcValue": {
+        "salt": {
             "type": "string",
             "defaultValue": "[utcNow()]"
         },
@@ -34,7 +34,7 @@
             "signedResourceTypes": "sco",
             "signedExpiry": "2023-12-31T00:00:00Z"
         },
-        "storageAccountName": "[uniqueString(subscription().subscriptionId, resourceGroup().name, parameters('utcValue'))]",
+        "storageAccountName": "[uniqueString(subscription().subscriptionId, resourceGroup().name, parameters('salt'))]",
         "containerName": "ashci",
         "imageName": "[concat('azure-stack-hci-', parameters('imageFileName'))]",
         "sourceVhdLocationValidation": "[if(endsWith(parameters('sourceVhdLocation'), '/'), substring(parameters('sourceVhdLocation'), 0, lastIndexOf(parameters('sourceVhdLocation'), '/')), parameters('sourceVhdLocation'))]",
@@ -67,7 +67,7 @@
             "location": "[resourceGroup().location]",
             "kind": "AzurePowerShell",
             "properties": {
-                "forceUpdateTag": "[parameters('utcValue')]",
+                "forceUpdateTag": "[parameters('salt')]",
                 "azPowerShellVersion": "6.4",
                 //"scriptContent": "param ([string]$sourceUri, [string]$destinationUri); Invoke-WebRequest https://aka.ms/downloadazcopy-v10-linux -OutFile downloadazcopy-v10-linux; tar -xvf downloadazcopy-v10-linux; cp ./azcopy_linux_amd64_*/azcopy /usr/bin/; azcopy cp $sourceUri $destinationUri",
                 "primaryScriptUri": "[parameters('deploymentScriptUri')]",

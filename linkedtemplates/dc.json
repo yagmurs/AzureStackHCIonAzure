@@ -43,7 +43,7 @@
         "enableHybridBenefitServerLicenses": {
             "type": "bool"
         },
-        "utcValue": {
+        "salt": {
             "type": "string",
             "defaultValue": "[utcNow()]"
         }
@@ -61,7 +61,7 @@
             "properties": {
                 "publicIPAllocationMethod": "Dynamic",
                 "dnsSettings": {
-                    "domainNameLabel": "[toLower(uniqueString(subscription().subscriptionId, resourceGroup().name, parameters('utcValue')))]"
+                    "domainNameLabel": "[toLower(uniqueString(subscription().subscriptionId, resourceGroup().name, parameters('salt')))]"
                 }
             }
         },

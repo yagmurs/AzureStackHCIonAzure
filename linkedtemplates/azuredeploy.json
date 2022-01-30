@@ -117,8 +117,11 @@
             "description": "Enable Azure Hybrid Benefit to use your on-premises Windows Server licenses and reduce cost. See https://docs.microsoft.com/en-us/azure/virtual-machines/windows/hybrid-use-benefit-licensing for more information."
             }
         },
-        "utcValue": {
+        "salt": {
             "type": "string",
+            "metadata": {
+                "description": "use utcNow() to randomize some resource names"
+            },
             "defaultValue": "1"
         }
     },
@@ -170,8 +173,8 @@
                     "enableHybridBenefitServerLicenses": {
                         "value": "[parameters('enableHybridBenefitServerLicenses')]"
                     },
-                    "utcValue": {
-                        "value": "[parameters('utcValue')]"
+                    "salt": {
+                        "value": "[parameters('salt')]"
                     }
                 }
             }
@@ -214,8 +217,8 @@
                     "imageFileName": {
                         "value": "[parameters('imageFileName')]"
                     },
-                    "utcValue": {
-                        "value": "[parameters('utcValue')]"
+                    "salt": {
+                        "value": "[parameters('salt')]"
                     }
                 }
             }
