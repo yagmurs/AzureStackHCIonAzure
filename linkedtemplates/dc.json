@@ -30,16 +30,6 @@
             },
             "defaultValue": "Standard_B2ms"
         },
-        "dataDiskSizeInGB": {
-            "type": "int",
-            "allowedValues": [
-                16,
-                32,
-                64,
-                128
-            ],
-            "defaultValue": 32
-        },
         "storageType": {
             "type": "string",
             "allowedValues": [
@@ -129,24 +119,12 @@
                     "osDisk": {
                         "name": "[concat(parameters('vmName'), '-osdisk')]",
                         "caching": "ReadWrite",
-                        "diskSizeGB": 128,
                         "createOption": "FromImage",
                         "managedDisk": {
-                            "storageAccountType": "Premium_LRS"
+                            "storageAccountType": "[parameters('storageType')]"
                         },
                         "osType": "Windows"
-                    },
-                    "dataDisks": [
-                        {
-                            "createOption": "Empty",
-                            "lun": 0,
-                            "caching": "ReadOnly",
-                            "diskSizeGB": "[parameters('dataDiskSizeInGB')]",
-                            "managedDisk": {
-                                "storageAccountType": "[parameters('storageType')]"
-                            }
-                        }
-                    ]
+                    }
                 },
                 "networkProfile": {
                     "networkInterfaces": [
