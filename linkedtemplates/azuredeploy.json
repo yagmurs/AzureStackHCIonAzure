@@ -128,9 +128,9 @@
     "functions": [],
     "variables": {
         "azureStackHciNodePrefix": "[concat(parameters('azureStackHciNodePrefix'), '-')]",
-        "dcVMSize": "Standard_B1s",
+        "dcVMSize": "Standard_B2ms", // "Standard_B2s"
         "dcVMName": "dc1",
-        "dcImageSku": "2022-datacenter-azure-edition-core-smalldisk" // "2022-datacenter-azure-edition-smalldisk"
+        "dcImageSku": "2022-datacenter-azure-edition-smalldisk" // "2022-datacenter-azure-edition-core-smalldisk"
     },
     "resources": [
         {
