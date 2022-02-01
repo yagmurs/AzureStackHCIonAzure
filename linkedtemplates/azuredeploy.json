@@ -37,12 +37,13 @@
                 "description": "provide your Ip address for NSG RDP rule"
             }
         },
-        "azureStackHciNodePrefix": {
+        "computerNamePrefix": {
             "type": "string",
             "metadata": {
-                "description": "description"
+                "description": "Computer Name Prefix for all computers getting deployed"
             },
             "defaultValue": "ashci",
+            "minLength": 1,
             "maxLength": 8
         },
         "numberOfAzureStackHciNodes": {
@@ -141,9 +142,9 @@
     },
     "functions": [],
     "variables": {
-        "azureStackHciNodePrefix": "[concat(parameters('azureStackHciNodePrefix'), '-')]",
-        "dcVMSize": "Standard_B2ms", // "Standard_B2s"
-        "dcVMName": "dc1",
+        "NodePrefix": "[concat(parameters('computerNamePrefix'), '-')]",
+        "dcVMSize": "Standard_B2ms", // "Standard_B2ms"
+        "dcVMName": "[concat(parameters('computerNamePrefix'), 'dc1')]",
         "dcImageSku": "2022-datacenter-azure-edition-smalldisk" // "2022-datacenter-azure-edition-core-smalldisk"
     },
     "resources": [
@@ -264,7 +265,7 @@
         {
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2021-04-01",
-            "name": "[concat('AzureStackHci-node-deployment-', variables('azureStackHciNodePrefix'), copyIndex())]",
+            "name": "[concat('AzureStackHci-node-deployment-', variables('NodePrefix'), 'hv', copyIndex())]",
             "copy": {
                 "name": "multiplenodes",
                 "count": "[parameters('numberOfAzureStackHciNodes')]"
@@ -283,7 +284,7 @@
                         "value": "[parameters('_artifactsLocationSasToken')]"
                     },
                     "vmName": {
-                        "value": "[concat(variables('azureStackHciNodePrefix'), copyIndex())]"
+                        "value": "[concat(variables('NodePrefix'), 'hv', copyIndex())]"
                     },
                     "vmSize": {
                         "value": "[if(startsWith(parameters('customVmSize'), 'Standard_'), parameters('customVmSize'), parameters('azureStackHciVmSize'))]"

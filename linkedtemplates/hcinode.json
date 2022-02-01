@@ -124,7 +124,7 @@
                             "privateIPAllocationMethod": "Dynamic",
                             "subnet": {
                                 "id": "[parameters('smbSubnetResourceId')]"
-                            }
+                            }                            
                         }
                     }
                 ],
