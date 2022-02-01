@@ -71,9 +71,23 @@
         "azureStackHciVmSize": {
             "type": "string",
             "metadata": {
-                "description": "description"
+                "description": "VM sizes that support nested virtualization"
             },
-            "defaultValue": "Standard_E4ds_v4"
+            "defaultValue": "Standard_E4ds_v4",
+            "allowedValues": [
+                "Standard_E2ds_v4",
+                "Standard_E4ds_v4",
+                "Standard_E8ds_v4",
+                "Standard_E16ds_v4",
+                "Standard_E20ds_v4"
+            ]
+        },
+        "customVmSize": {
+            "type": "string",
+            "metadata": {
+                "description": "any other VM size option (not listed above) from D or E series that support nested virtualization"
+            },
+            "defaultValue": ""
         },
         "dataDiskSizeInGB": {
             "type": "int",
@@ -272,7 +286,7 @@
                         "value": "[concat(variables('azureStackHciNodePrefix'), copyIndex())]"
                     },
                     "vmSize": {
-                        "value": "[parameters('azureStackHciVmSize')]"
+                        "value": "[if(startsWith(parameters('customVmSize'), 'Standard_'), parameters('customVmSize'), parameters('azureStackHciVmSize'))]"
                     },
                     "managementSubnetResourceId": {
                         "value": "[reference('vnet-with-predefined-nsg').outputs.managementSubnetResourceId.value]"
