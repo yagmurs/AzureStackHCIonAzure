@@ -7,7 +7,7 @@ $hciNodes = (Get-ADComputer -Filter { OperatingSystem -Like '*Azure Stack HCI*'}
 $subscriptionID = "4df06176-1e12-4112-b568-0fe6d209bbe2"
 $wac = $hciNodes[0]
 
-Invoke-Command -ComputerName $hciNodes -ScriptBlock {
+Invoke-Command -ComputerName $hciNodes.name -ScriptBlock {
 
     $managementNetadapterName = $using:managementNetadapterName
     $smbNetadapterName = $using:smbNetadapterName
@@ -17,8 +17,6 @@ Invoke-Command -ComputerName $hciNodes -ScriptBlock {
     Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
     choco feature enable -n=allowGlobalConfirmation
     choco install powershell-core
-    #choco install windows-admin-center --params='/Port:443'
-    #choco uninstall windows-admin-center
     choco install azure-cli
 
     Install-WindowsFeature -Name Hyper-V, Failover-Clustering, FS-Data-Deduplication, Bitlocker, Data-Center-Bridging, RSAT-AD-PowerShell, NetworkATC -IncludeAllSubFeature -IncludeManagementTools -Verbose
@@ -26,6 +24,7 @@ Invoke-Command -ComputerName $hciNodes -ScriptBlock {
     Get-NetIPAddress | Where-Object IPv4Address -like 10.255.255.* | Get-NetAdapter | Rename-NetAdapter -NewName $smbNetadapterName
     Get-NetAdapter $smbNetadapterName | Set-DNSClient -RegisterThisConnectionsAddress $False
 
+<#
     $switchExist = Get-VMSwitch -Name $vmSwitchName -ErrorAction SilentlyContinue
     if (!$switchExist) {
 
@@ -46,16 +45,9 @@ Invoke-Command -ComputerName $hciNodes -ScriptBlock {
 
         Write-Verbose "Creating new NETNAT"
         New-NetNat -Name $vmSwitchName  -InternalIPInterfaceAddressPrefix "192.168.0.0/16" | Out-Null
-    }
+#>
 
 }
-
-New-Cluster -Name $clusterName -Node $hciNodes.name -NoStorage -verbose
-New-net
-Enable-ClusterS2D -CimSession $clusterName -Confirm:$false -Verbose
-New-Volume -FriendlyName "Volume1" -FileSystem CSVFS_ReFS -StoragePoolFriendlyName S2D* -Size 1TB -ProvisioningType Thin -CimSession $clusterName
-
-Add-NetIntent -Name vmswitch -Management -Compute -ClusterName cls1 -AdapterName management
 
 ################ Enable AD kerberos delegation for Windows Admin Center Computer ################
 
@@ -64,5 +56,23 @@ $hciNodes | Set-ADComputer -PrincipalsAllowedToDelegateToAccount $gatewayObject 
 
 Install-Module -Name Az.StackHCI
 Register-AzStackHCI -SubscriptionId $subscriptionID -ComputerName $hciNodes[0] -ResourceGroupName sil
+
+################ Install Windows Admin Center to first Azure Stack HCI Node ################
+Invoke-Command -ComputerName $hciNodes[0].name -ScriptBlock {
+    choco install windows-admin-center --params='/Port:443'
+}
+
+New-Cluster -Name $clusterName -Node $hciNodes.name -NoStorage -verbose
+
+Enable-ClusterS2D -CimSession $clusterName -Confirm:$false -Verbose
+New-Volume -FriendlyName "Volume1" -FileSystem CSVFS_ReFS -StoragePoolFriendlyName S2D* -Size 1TB -ProvisioningType Thin -CimSession $clusterName
+
+################ Setup Intent based network config from first Azure Stack HCI Node ################
+Invoke-Command -ComputerName $hciNodes[0].name -ScriptBlock {
+    $managementNetadapterName = $using:managementNetadapterName
+    $clusterName = $using:clusterName
+    $vmSwitchName = $using:vmSwitchName
+    Add-NetIntent -Name $vmSwitchName -Management -Compute -ClusterName $clusterName -AdapterName $managementNetadapterName
+}
 
 
