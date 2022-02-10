@@ -196,6 +196,14 @@
                         }
                     ]
                 },
+                "securityProfile": {
+                    "encryptionAtHost": true,
+                    "securityType": "TrustedLaunch",
+                    "uefiSettings": {
+                        "secureBootEnabled": true,
+                        "vTpmEnabled": true
+                    }
+                },
                 "diagnosticsProfile": {
                     "bootDiagnostics": {
                         "enabled": true
