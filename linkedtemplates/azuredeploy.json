@@ -86,7 +86,7 @@
         "customVmSize": {
             "type": "string",
             "metadata": {
-                "description": "any other VM size option (not listed above) from D or E series that support nested virtualization"
+                "description": "Any other VM size options not listed above. Must be D or E VM series, that supports nested virtualization"
             },
             "defaultValue": ""
         },
@@ -144,7 +144,7 @@
     "variables": {
         "NodePrefix": "[concat(parameters('computerNamePrefix'), '-')]",
         "dcVMSize": "Standard_B2ms", // "Standard_B2ms"
-        "dcVMName": "[concat(parameters('computerNamePrefix'), 'dc1')]",
+        "dcVMName": "[concat(variables('NodePrefix'), 'dc1')]",
         "dcImageSku": "2022-datacenter-azure-edition-smalldisk" // "2022-datacenter-azure-edition-core-smalldisk"
     },
     "resources": [

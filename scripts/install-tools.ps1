@@ -24,7 +24,7 @@ Invoke-Command -ComputerName $hciNodes -ScriptBlock {
     Install-WindowsFeature -Name Hyper-V, Failover-Clustering, FS-Data-Deduplication, Bitlocker, Data-Center-Bridging, RSAT-AD-PowerShell, NetworkATC -IncludeAllSubFeature -IncludeManagementTools -Verbose
     Get-NetIPAddress | Where-Object IPv4Address -like 10.255.254.* | Get-NetAdapter | Rename-NetAdapter -NewName $managementNetadapterName
     Get-NetIPAddress | Where-Object IPv4Address -like 10.255.255.* | Get-NetAdapter | Rename-NetAdapter -NewName $smbNetadapterName
-    Get-NetAdapter $smbNetadapterName | Set-DNSClient –RegisterThisConnectionsAddress $False
+    Get-NetAdapter $smbNetadapterName | Set-DNSClient -RegisterThisConnectionsAddress $False
 
     $switchExist = Get-VMSwitch -Name $vmSwitchName -ErrorAction SilentlyContinue
     if (!$switchExist) {
