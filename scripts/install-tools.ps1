@@ -1,12 +1,13 @@
+$tenantId = "<tenant_id>"
+$subscriptionID = "<subscription_id>"
+$targetResourceGroup = "<resource_group_name>"
 $managementNetadapterName = "management"
 $smbNetadapterName = "smb"
 $vmSwitchName = "vmswitch"
 $clusterName = "cls1"
 $natNetworkCIDR =  "192.168.0.0/16"
-$hciNodes = @()
 $hciNodes = (Get-ADComputer -Filter { OperatingSystem -Like '*Azure Stack HCI*'} | Sort-Object)
-$subscriptionID = "<subscription_id>"
-$targetResourceGroup = "<resource_group_name>"
+
 $firstNode = $hciNodes | Select-Object -First 1
 $newVolumeName = "volume1"
 $ws2019IsoUri = "https://software-download.microsoft.com/download/pr/17763.737.190906-2324.rs5_release_svc_refresh_SERVER_EVAL_x64FRE_en-us_1.iso"
@@ -14,13 +15,21 @@ $ws2019IsoUri = "https://software-download.microsoft.com/download/pr/17763.737.1
 ################ Install managament tools for future use ################
 Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
 choco feature enable -n=allowGlobalConfirmation
-choco install powershell-core
-choco install azure-cli
+#choco install powershell-core
+#choco install azure-cli
+
+# Update Powershell package provider and trust gallery
+Install-PackageProvider Nuget -Force -Verbose
 Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
-Install-Module -Name az -Verbose
+#Install-Module -Name az -Verbose
 
 ################ Prepare Azure Stack HCI nodes for cluster setup ################
 Invoke-Command -ComputerName $hciNodes.name -ScriptBlock {
+
+    # Update Powershell package provider and trust gallery
+    Install-PackageProvider Nuget -Force -Verbose
+    Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+    Install-Module -Name PowerShellGet -Force
 
     # Preparing Azure Stack HCI node for Azure Arc integration (Disabling WindowsAzureGuestAgent) https://docs.microsoft.com/en-us/azure/azure-arc/servers/plan-evaluate-on-azure-virtual-machine
     Set-Service WindowsAzureGuestAgent -StartupType Disabled -Verbose
@@ -33,8 +42,8 @@ Invoke-Command -ComputerName $hciNodes.name -ScriptBlock {
     
     Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
     choco feature enable -n=allowGlobalConfirmation
-    choco install powershell-core
-    choco install azure-cli
+    #choco install powershell-core
+    #choco install azure-cli
 
     Install-WindowsFeature -Name Hyper-V, Failover-Clustering, FS-Data-Deduplication, Bitlocker, Data-Center-Bridging, RSAT-AD-PowerShell, NetworkATC -IncludeAllSubFeature -IncludeManagementTools -Verbose
     Get-NetIPAddress | Where-Object IPv4Address -like 10.255.254.* | Get-NetAdapter | Rename-NetAdapter -NewName $managementNetadapterName
@@ -59,10 +68,10 @@ Invoke-Command -ComputerName $firstNode.name -ScriptBlock {
 }
 
 ################ Enable AD kerberos delegation for Windows Admin Center Computer Account for SSO ################
-$gatewayObject = Get-ADComputer -Identity $firstNode
-$hciNodes | Set-ADComputer -PrincipalsAllowedToDelegateToAccount $gatewayObject -Verbose
-Get-ADComputer -Identity $clusterName | Set-ADComputer -PrincipalsAllowedToDelegateToAccount $gatewayObject -Verbose
-Get-ClusterGroup -Name "Cluster Group" -Cluster $clusterName | Move-ClusterGroup
+$wacObject = Get-ADComputer -Identity $firstNode
+$hciNodes | Set-ADComputer -PrincipalsAllowedToDelegateToAccount $wacObject -Verbose
+Get-ADComputer -Identity $clusterName | Set-ADComputer -PrincipalsAllowedToDelegateToAccount $wacObject -Verbose
+Get-ClusterGroup -Name "Cluster Group" -Cluster $clusterName | Move-ClusterGroup -ErrorAction SilentlyContinue
 
 ################ Download Windows Server 2019 ISO file to Cluster Storage ################
 $isoFileDestination = "\\$($firstNode.name)\c$\ClusterStorage\$newVolumeName\iso"
@@ -115,7 +124,7 @@ Invoke-Command -ComputerName $hciNodes.name -ScriptBlock {
 ################ Register Azure Stack HCI using Powershell ################
 # https://docs.microsoft.com/en-us/azure-stack/hci/deploy/register-with-azure#register-a-cluster-using-powershell
 Install-Module -Name Az.StackHCI
-Register-AzStackHCI -SubscriptionId $subscriptionID -ComputerName $firstNode.name -ResourceGroupName $targetResourceGroup #-TenantId "<tenant_id>" -Region "<region>"
+Register-AzStackHCI -SubscriptionId $subscriptionID -ComputerName $firstNode.name -ResourceGroupName $targetResourceGroup #-TenantId $tenantId -Region "<region>"
 
 ################ Create VMs for testing ################
 Invoke-Command -ComputerName $firstNode.name -ScriptBlock {
@@ -137,15 +146,10 @@ Invoke-Command -ComputerName $firstNode.name -ScriptBlock {
     }
 }
 
-
-Invoke-Command -ComputerName $firstNode.name -ScriptBlock {
-    Install-PackageProvider Nuget -Force -Verbose
-    Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
-    Install-Module -Name PowerShellGet -Force
-}
 Invoke-Command -ComputerName $firstNode.name -ScriptBlock {
     Install-Module -Name AksHci -Repository PSGallery -AcceptLicense
 }
+
 Connect-AzAccount -UseDeviceAuthentication
 Set-AzContext -Subscription $subscriptionID
 Register-AzResourceProvider -ProviderNamespace Microsoft.Kubernetes
