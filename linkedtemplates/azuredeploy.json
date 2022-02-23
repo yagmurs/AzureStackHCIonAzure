@@ -51,7 +51,7 @@
             "metadata": {
                 "description": "description"
             },
-            "defaultValue": 2,
+            "defaultValue": 1,
             "maxValue": 16
         },
         "adminUsername": {
@@ -116,7 +116,7 @@
             "type": "int",
             "minValue": 3,
             "maxValue": 12,
-            "defaultValue": 6
+            "defaultValue": 8
         },
         "installAdminCenterOnDc": {
             "type": "bool",

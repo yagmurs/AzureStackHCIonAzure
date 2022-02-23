@@ -1,6 +1,9 @@
+$VerbosePreference = "Continue"
+
 $tenantId = "<tenant_id>"
 $subscriptionID = "<subscription_id>"
 $targetResourceGroup = "<resource_group_name>"
+
 $managementNetadapterName = "management"
 $smbNetadapterName = "smb"
 $vmSwitchName = "vmswitch"
@@ -57,9 +60,10 @@ Clear-DnsClientCache
 
 ################ Enable Storage Spaces Direct on Azure Stack HCI Cluster ################
 Enable-ClusterS2D -CimSession $clusterName -Confirm:$false -Verbose
+Start-Sleep -Seconds 60
 
 ################ Create new thin volume on Storage Spaces Direct on Azure Stack HCI Cluster ################
-Clear-DnsClientCache
+
 New-Volume -FriendlyName $newVolumeName -FileSystem CSVFS_ReFS -StoragePoolFriendlyName S2D* -Size 1TB -ProvisioningType Thin -CimSession $clusterName
 
 ################ Install Windows Admin Center onto first Azure Stack HCI Node ################
@@ -73,12 +77,7 @@ $hciNodes | Set-ADComputer -PrincipalsAllowedToDelegateToAccount $wacObject -Ver
 Get-ADComputer -Identity $clusterName | Set-ADComputer -PrincipalsAllowedToDelegateToAccount $wacObject -Verbose
 Get-ClusterGroup -Name "Cluster Group" -Cluster $clusterName | Move-ClusterGroup -ErrorAction SilentlyContinue
 
-################ Download Windows Server 2019 ISO file to Cluster Storage ################
-$isoFileDestination = "\\$($firstNode.name)\c$\ClusterStorage\$newVolumeName\iso"
-New-Item -Path $isoFileDestination -ItemType Directory -Force
-Start-BitsTransfer -Source $ws2019IsoUri -Destination "$isoFileDestination\ws2019.iso"
-
-################ Setup Intent based network config from first Azure Stack HCI Node ################
+################ Setup Intent based network config on Azure Stack HCI Cluster ################
 ## Workaround to run NetworkATC cmdlets remotely
 Copy-Item "\\$($firstNode.name)\c$\Windows\System32\WindowsPowerShell\v1.0\Modules\NetworkATC\" -Destination C:\Windows\System32\WindowsPowerShell\v1.0\Modules\NetworkATC -Recurse -Force -Verbose
 Copy-Item "\\$($firstNode.name)\c$\Windows\System32\NetworkAtc.Driver.dll" -Destination "C:\Windows\System32\" -Force -Verbose
@@ -123,8 +122,15 @@ Invoke-Command -ComputerName $hciNodes.name -ScriptBlock {
 
 ################ Register Azure Stack HCI using Powershell ################
 # https://docs.microsoft.com/en-us/azure-stack/hci/deploy/register-with-azure#register-a-cluster-using-powershell
-Install-Module -Name Az.StackHCI
-Register-AzStackHCI -SubscriptionId $subscriptionID -ComputerName $firstNode.name -ResourceGroupName $targetResourceGroup #-TenantId $tenantId -Region "<region>"
+Install-Module -Name Az.StackHCI -Verbose
+Register-AzStackHCI -SubscriptionId $subscriptionID -ComputerName $firstNode.name -ResourceGroupName $targetResourceGroup -TenantId $tenantId -Verbose # -Region "<region>"
+
+#region for VM testing
+
+################ Download Windows Server 2019 ISO file to Cluster Storage ################
+$isoFileDestination = "\\$($firstNode.name)\c$\ClusterStorage\$newVolumeName\iso"
+New-Item -Path $isoFileDestination -ItemType Directory -Force
+Start-BitsTransfer -Source $ws2019IsoUri -Destination "$isoFileDestination\ws2019.iso"
 
 ################ Create VMs for testing ################
 Invoke-Command -ComputerName $firstNode.name -ScriptBlock {
@@ -146,19 +152,26 @@ Invoke-Command -ComputerName $firstNode.name -ScriptBlock {
     }
 }
 
-Invoke-Command -ComputerName $firstNode.name -ScriptBlock {
-    Install-Module -Name AksHci -Repository PSGallery -AcceptLicense
-}
+#endregion
 
+#region run from Azure Stack HCI node
+################ Run following from one of Azure Stack HCI nodes using RDP ################
+$VerbosePreference = "Continue"
+Install-Module -Name AksHci -Repository PSGallery -AcceptLicense
 Connect-AzAccount -UseDeviceAuthentication
 Set-AzContext -Subscription $subscriptionID
 Register-AzResourceProvider -ProviderNamespace Microsoft.Kubernetes
 Register-AzResourceProvider -ProviderNamespace Microsoft.KubernetesConfiguration
 Get-AzResourceProvider -ProviderNamespace Microsoft.Kubernetes
 Get-AzResourceProvider -ProviderNamespace Microsoft.KubernetesConfiguration
-Initialize-AksHciNode
+Initialize-AksHciNode -Verbose
 #static IP
-$vnet = New-AksHciNetworkSetting -name myvnet -vSwitchName 'ConvergedSwitch(vmswitch)' -k8sNodeIpPoolStart "192.168.1.0" -k8sNodeIpPoolEnd "192.168.1.255" -vipPoolStart "192.168.2.0" -vipPoolEnd "192.168.2.255" -ipAddressPrefix "192.168.0.0/16" -gateway "192.168.0.1" -dnsServers "10.255.254.4" -vlanId 0
+$switch = Get-VmSwitch 
+$vnet = New-AksHciNetworkSetting -name myvnet -vSwitchName $switch.Name -k8sNodeIpPoolStart "192.168.1.0" -k8sNodeIpPoolEnd "192.168.1.255" -vipPoolStart "192.168.2.0" -vipPoolEnd "192.168.2.255" -ipAddressPrefix "192.168.0.0/16" -gateway "192.168.0.1" -dnsServers "10.255.254.4" -vlanId 0
 Set-AksHciConfig -imageDir c:\clusterstorage\volume1\ImageStore -workingDir c:\ClusterStorage\Volume1\ -cloudConfigLocation c:\clusterstorage\volume1\Config -vnet $vnet -cloudservicecidr "10.255.254.101/24"
 Set-AksHciRegistration -subscriptionId $subscriptionID -resourceGroupName $targetResourceGroup -SkipLogin
 Install-AksHci
+
+New-AksHciCluster -Name w-1 -nodePoolName lp1 -nodeCount 1 -osType Linux
+Enable-AksHciArcConnection -Name w-1
+#endregion
