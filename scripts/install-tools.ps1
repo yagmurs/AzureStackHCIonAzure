@@ -3,8 +3,10 @@ $smbNetadapterName = "smb"
 $vmSwitchName = "vmswitch"
 $clusterName = "cls1"
 $natNetworkCIDR =  "192.168.0.0/16"
+$hciNodes = @()
 $hciNodes = (Get-ADComputer -Filter { OperatingSystem -Like '*Azure Stack HCI*'} | Sort-Object)
-$subscriptionID = "4df06176-1e12-4112-b568-0fe6d209bbe2"
+$subscriptionID = "<subscription_id>"
+$targetResourceGroup = "sil"
 $wac = $hciNodes[0]
 $newVolumeName = "volume1"
 $ws2019IsoUri = "https://software-download.microsoft.com/download/pr/17763.737.190906-2324.rs5_release_svc_refresh_SERVER_EVAL_x64FRE_en-us_1.iso"
@@ -39,34 +41,11 @@ Invoke-Command -ComputerName $hciNodes.name -ScriptBlock {
     Get-NetIPAddress | Where-Object IPv4Address -like 10.255.254.* | Get-NetAdapter | Rename-NetAdapter -NewName $managementNetadapterName
     Get-NetIPAddress | Where-Object IPv4Address -like 10.255.255.* | Get-NetAdapter | Rename-NetAdapter -NewName $smbNetadapterName
     Get-NetAdapter $smbNetadapterName | Set-DNSClient -RegisterThisConnectionsAddress $False
-
-<#
-    $switchExist = Get-VMSwitch -Name $vmSwitchName -ErrorAction SilentlyContinue
-    if (!$switchExist) {
-
-        $natPrefix = $natNetworkCIDR.Split("/")[1]
-        $natIP = $natNetworkCIDR.Replace($("0/" + "$natPrefix"), "1") 
-
-        Write-Verbose "Creating Internal NAT Switch: $vmSwitchName"
-        # Create Internal VM Switch for NAT
-        New-VMSwitch -Name $vmSwitchName -SwitchType Internal | Out-Null
-
-        Write-Verbose "Applying IP Address to NAT Switch: $vmSwitchName"
-        # Apply IP Address to new Internal VM Switch
-        $intIndex = (Get-NetAdapter | Where-Object { $_.Name -match $vmSwitchName}).ifIndex
-   
-        New-NetIPAddress -IPAddress $natIP -PrefixLength 16 -InterfaceIndex $intIndex | Out-Null
-
-        # Create NetNAT
-
-        Write-Verbose "Creating new NETNAT"
-        New-NetNat -Name $vmSwitchName  -InternalIPInterfaceAddressPrefix "192.168.0.0/16" | Out-Null
-#>
-
 }
 
 ################ Create New Azure Stack HCI cluster ################
 New-Cluster -Name $clusterName -Node $hciNodes.name -NoStorage -ManagementPointNetworkType Distributed -Verbose
+Clear-DnsClientCache
 
 ################ Enable Storage Spaces Direct on Azure Stack HCI Cluster ################
 Enable-ClusterS2D -CimSession $clusterName -Confirm:$false -Verbose
@@ -98,6 +77,34 @@ Copy-Item "\\$($hciNodes[0].name)\c$\Windows\System32\Newtonsoft.Json.dll" -Dest
 Import-Module NetworkATC
 Add-NetIntent -Name $vmSwitchName -Management -Compute -ClusterName $clusterName -AdapterName $managementNetadapterName
 
+################ Add additional vNic to enable NAT to allow VMs to access to internet ################
+Invoke-Command -ComputerName $hciNodes.name -ScriptBlock {
+
+    do
+    {
+        $switch = Get-VMSwitch
+        Write-Verbose "Waiting for VM Switch"
+        Start-Sleep -Seconds 5
+    }
+    until ($switch.count -gt 0)
+    
+    $natPrefix = $($using:natNetworkCIDR).Split("/")[1]
+    $natIP = $($using:natNetworkCIDR).Replace($("0/" + "$natPrefix"), "1")
+    
+    Write-Verbose "Adding vNic for NAT"
+    Add-VMNetworkAdapter -SwitchName  $switch.Name -Name nat -ManagementOS
+
+    # Set IP Address to new vNic
+    Write-Verbose "Set IP Address to new vNic: nat"
+    $intIndex = (Get-NetAdapter | Where-Object { $_.Name -match "nat"}).ifIndex
+    New-NetIPAddress -IPAddress $natIP -PrefixLength $natPrefix -InterfaceIndex $intIndex | Out-Null
+
+    # Create NetNAT
+    Write-Verbose "Creating new NetNat"
+    New-NetNat -Name nat  -InternalIPInterfaceAddressPrefix $natNetworkCIDR | Out-Null
+}
+
+
 ################ Register Windows Admin Center with Azure ################
 # https://docs.microsoft.com/en-us/azure-stack/hci/deploy/register-with-azure#prerequisites-for-cluster-registration
 
@@ -106,3 +113,45 @@ Add-NetIntent -Name $vmSwitchName -Management -Compute -ClusterName $clusterName
 
 ################ Register Azure Stack HCI using Powershell ################
 # https://docs.microsoft.com/en-us/azure-stack/hci/deploy/register-with-azure#register-a-cluster-using-powershell
+Install-Module -Name Az.StackHCI
+Register-AzStackHCI -SubscriptionId $subscriptionID -ComputerName $hciNodes[0].name -ResourceGroupName $targetResourceGroup #-TenantId "<tenant_id>" -Region "<region>"
+
+################ Create VMs for testing ################
+Invoke-Command -ComputerName $hciNodes[0].name -ScriptBlock {
+    $newVolumeName = $using:newVolumeName
+    $isoFile = "$using:isoFileDestination\ws2019.iso"
+    $vhdPath = "c:\Clusterstorage\$newVolumeName\VMs"
+    $vmPrefix = "test"
+    foreach ($item in 1..2)
+    {
+        $vmName = $vmPrefix + $item
+        $vm = New-VM -Name $vmName -MemoryStartupBytes 4gb -SwitchName nat -NewVHDPath "$vhdPath\$vmName\Virtual Hard Disks\$vmName.vhdx" -NewVHDSizeBytes 50gb -Path $vhdPath -Generation 2
+        Set-VMProcessor -VMName $vmName -Count 2
+        Add-VMDvdDrive -VM $vm -Path $isoFile
+        $dvdDrive = Get-VMDvdDrive -vm $vm
+        $osDrive = Get-VMHardDiskDrive -VM $vm
+        Set-VMFirmware -VM $vm -BootOrder $osDrive, $dvdDrive
+        Add-ClusterVirtualMachineRole -VMId $vm.VMId
+        Start-VM -Name $vmName  
+    }
+}
+
+
+etsn ashci-hv0
+Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+Install-Module -Name PowerShellGet -Force
+exit
+etsn ashci-hv0
+Install-Module -Name AksHci -Repository PSGallery -AcceptLicense
+Connect-AzAccount -UseDeviceAuthentication
+Set-AzContext -Subscription $subscriptionID
+Register-AzResourceProvider -ProviderNamespace Microsoft.Kubernetes
+Register-AzResourceProvider -ProviderNamespace Microsoft.KubernetesConfiguration
+Get-AzResourceProvider -ProviderNamespace Microsoft.Kubernetes
+Get-AzResourceProvider -ProviderNamespace Microsoft.KubernetesConfiguration
+Initialize-AksHciNode
+#static IP
+$vnet = New-AksHciNetworkSetting -name myvnet -vSwitchName 'ConvergedSwitch(vmswitch)' -k8sNodeIpPoolStart "192.168.1.0" -k8sNodeIpPoolEnd "192.168.1.255" -vipPoolStart "192.168.2.0" -vipPoolEnd "192.168.2.255" -ipAddressPrefix "192.168.0.0/16" -gateway "192.168.0.1" -dnsServers "10.255.254.4" -vlanId 0
+Set-AksHciConfig -imageDir c:\clusterstorage\volume1\ImageStore -workingDir c:\ClusterStorage\Volume1\ -cloudConfigLocation c:\clusterstorage\volume1\Config -vnet $vnet -cloudservicecidr "10.255.254.101/24"
+Set-AksHciRegistration -subscriptionId $subscriptionID -resourceGroupName $targetResourceGroup -SkipLogin
+Install-AksHci
