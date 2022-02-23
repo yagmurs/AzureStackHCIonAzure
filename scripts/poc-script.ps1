@@ -19,7 +19,9 @@ $ws2019IsoUri = "https://software-download.microsoft.com/download/pr/17763.737.1
 Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
 choco feature enable -n=allowGlobalConfirmation
 #choco install powershell-core
-#choco install azure-cli
+choco install azure-cli
+choco install kubernetes-cli
+choco install kubernetes-helm
 
 # Update Powershell package provider and trust gallery
 Install-PackageProvider Nuget -Force -Verbose
