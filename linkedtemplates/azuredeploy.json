@@ -56,7 +56,7 @@
         },
         "adminUsername": {
             "type": "string",
-            "defaultValue": "adm01"
+            "defaultValue": "azureadmin"
         },
         "adminPassword": {
             "type": "securestring"
@@ -100,7 +100,7 @@
                 1024,
                 2048
             ],
-            "defaultValue": 256
+            "defaultValue": 128
         },
         "storageType": {
             "type": "string",
@@ -116,14 +116,14 @@
             "type": "int",
             "minValue": 3,
             "maxValue": 12,
-            "defaultValue": 4
+            "defaultValue": 6
         },
         "installAdminCenterOnDc": {
             "type": "bool",
             "metadata": {
                 "description": "description"
             },
-            "defaultValue": true
+            "defaultValue": false
         },
         "enableHybridBenefitServerLicenses": {
             "type": "bool",
