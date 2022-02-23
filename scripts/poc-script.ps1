@@ -75,6 +75,7 @@ Invoke-Command -ComputerName $firstNode.name -ScriptBlock {
 
 ################ Enable AD kerberos delegation for Windows Admin Center Computer Account for SSO ################
 $wacObject = Get-ADComputer -Identity $firstNode
+$hciNodes = (Get-ADComputer -Filter { OperatingSystem -Like '*Azure Stack HCI*'} | Sort-Object)
 $hciNodes | Set-ADComputer -PrincipalsAllowedToDelegateToAccount $wacObject -Verbose
 Get-ADComputer -Identity $clusterName | Set-ADComputer -PrincipalsAllowedToDelegateToAccount $wacObject -Verbose
 Get-ClusterGroup -Name "Cluster Group" -Cluster $clusterName | Move-ClusterGroup -ErrorAction SilentlyContinue
@@ -93,7 +94,7 @@ Invoke-Command -ComputerName $hciNodes.name -ScriptBlock {
     do
     {
         $switch = Get-VMSwitch
-        Write-Verbose "Waiting for VM Switch"
+        Write-Verbose "Waiting for VM Switch" -Verbose
         Start-Sleep -Seconds 5
     }
     until ($switch.count -gt 0)
@@ -108,11 +109,11 @@ Invoke-Command -ComputerName $hciNodes.name -ScriptBlock {
     # Set IP Address to new vNic
     Write-Verbose "Set IP Address to new vNic: nat"
     $intIndex = (Get-NetAdapter | Where-Object { $_.Name -match "nat"}).ifIndex
-    New-NetIPAddress -IPAddress $natIP -PrefixLength $natPrefix -InterfaceIndex $intIndex | Out-Null
+    New-NetIPAddress -IPAddress $natIP -PrefixLength $natPrefix -InterfaceIndex $intIndex -ErrorAction SilentlyContinue | Out-Null
 
     # Create NetNAT
     Write-Verbose "Creating new NetNat"
-    New-NetNat -Name nat  -InternalIPInterfaceAddressPrefix $natNetworkCIDR | Out-Null
+    New-NetNat -Name nat  -InternalIPInterfaceAddressPrefix $natNetworkCIDR -ErrorAction SilentlyContinue | Out-Null
 }
 
 

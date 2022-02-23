@@ -49,7 +49,7 @@
         "numberOfAzureStackHciNodes": {
             "type": "int",
             "metadata": {
-                "description": "description"
+                "description": "up to 16 nodes allowed"
             },
             "defaultValue": 1,
             "maxValue": 16
@@ -74,7 +74,7 @@
             "metadata": {
                 "description": "VM sizes that support nested virtualization"
             },
-            "defaultValue": "Standard_E4ds_v4",
+            "defaultValue": "Standard_E8ds_v4",
             "allowedValues": [
                 "Standard_E2ds_v4",
                 "Standard_E4ds_v4",
