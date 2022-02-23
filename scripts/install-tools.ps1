@@ -6,8 +6,8 @@ $natNetworkCIDR =  "192.168.0.0/16"
 $hciNodes = @()
 $hciNodes = (Get-ADComputer -Filter { OperatingSystem -Like '*Azure Stack HCI*'} | Sort-Object)
 $subscriptionID = "<subscription_id>"
-$targetResourceGroup = "sil"
-$wac = $hciNodes[0]
+$targetResourceGroup = "<resource_group_name>"
+$firstNode = $hciNodes | Select-Object -First 1
 $newVolumeName = "volume1"
 $ws2019IsoUri = "https://software-download.microsoft.com/download/pr/17763.737.190906-2324.rs5_release_svc_refresh_SERVER_EVAL_x64FRE_en-us_1.iso"
 
@@ -30,8 +30,7 @@ Invoke-Command -ComputerName $hciNodes.name -ScriptBlock {
     $managementNetadapterName = $using:managementNetadapterName
     $smbNetadapterName = $using:smbNetadapterName
     $vmSwitchName = $using:vmSwitchName
-    $natNetworkCIDR = $using:natNetworkCIDR
-
+    
     Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
     choco feature enable -n=allowGlobalConfirmation
     choco install powershell-core
@@ -51,29 +50,30 @@ Clear-DnsClientCache
 Enable-ClusterS2D -CimSession $clusterName -Confirm:$false -Verbose
 
 ################ Create new thin volume on Storage Spaces Direct on Azure Stack HCI Cluster ################
+Clear-DnsClientCache
 New-Volume -FriendlyName $newVolumeName -FileSystem CSVFS_ReFS -StoragePoolFriendlyName S2D* -Size 1TB -ProvisioningType Thin -CimSession $clusterName
 
 ################ Install Windows Admin Center onto first Azure Stack HCI Node ################
-Invoke-Command -ComputerName $hciNodes[0].name -ScriptBlock {
+Invoke-Command -ComputerName $firstNode.name -ScriptBlock {
     choco install windows-admin-center --params='/Port:443'
 }
 
 ################ Enable AD kerberos delegation for Windows Admin Center Computer Account for SSO ################
-$gatewayObject = Get-ADComputer -Identity $wac
+$gatewayObject = Get-ADComputer -Identity $firstNode
 $hciNodes | Set-ADComputer -PrincipalsAllowedToDelegateToAccount $gatewayObject -Verbose
 Get-ADComputer -Identity $clusterName | Set-ADComputer -PrincipalsAllowedToDelegateToAccount $gatewayObject -Verbose
 Get-ClusterGroup -Name "Cluster Group" -Cluster $clusterName | Move-ClusterGroup
 
 ################ Download Windows Server 2019 ISO file to Cluster Storage ################
-$isoFileDestination = "\\$($hciNodes[0].name)\c$\ClusterStorage\$newVolumeName\iso"
+$isoFileDestination = "\\$($firstNode.name)\c$\ClusterStorage\$newVolumeName\iso"
 New-Item -Path $isoFileDestination -ItemType Directory -Force
 Start-BitsTransfer -Source $ws2019IsoUri -Destination "$isoFileDestination\ws2019.iso"
 
 ################ Setup Intent based network config from first Azure Stack HCI Node ################
 ## Workaround to run NetworkATC cmdlets remotely
-Copy-Item "\\$($hciNodes[0].name)\c$\Windows\System32\WindowsPowerShell\v1.0\Modules\NetworkATC\" -Destination C:\Windows\System32\WindowsPowerShell\v1.0\Modules\NetworkATC -Recurse -Force -Verbose
-Copy-Item "\\$($hciNodes[0].name)\c$\Windows\System32\NetworkAtc.Driver.dll" -Destination "C:\Windows\System32\" -Force -Verbose
-Copy-Item "\\$($hciNodes[0].name)\c$\Windows\System32\Newtonsoft.Json.dll" -Destination "C:\Windows\System32\" -Force -Verbose
+Copy-Item "\\$($firstNode.name)\c$\Windows\System32\WindowsPowerShell\v1.0\Modules\NetworkATC\" -Destination C:\Windows\System32\WindowsPowerShell\v1.0\Modules\NetworkATC -Recurse -Force -Verbose
+Copy-Item "\\$($firstNode.name)\c$\Windows\System32\NetworkAtc.Driver.dll" -Destination "C:\Windows\System32\" -Force -Verbose
+Copy-Item "\\$($firstNode.name)\c$\Windows\System32\Newtonsoft.Json.dll" -Destination "C:\Windows\System32\" -Force -Verbose
 Import-Module NetworkATC
 Add-NetIntent -Name $vmSwitchName -Management -Compute -ClusterName $clusterName -AdapterName $managementNetadapterName
 
@@ -90,7 +90,8 @@ Invoke-Command -ComputerName $hciNodes.name -ScriptBlock {
     
     $natPrefix = $($using:natNetworkCIDR).Split("/")[1]
     $natIP = $($using:natNetworkCIDR).Replace($("0/" + "$natPrefix"), "1")
-    
+    $natNetworkCIDR = $using:natNetworkCIDR
+
     Write-Verbose "Adding vNic for NAT"
     Add-VMNetworkAdapter -SwitchName  $switch.Name -Name nat -ManagementOS
 
@@ -114,10 +115,10 @@ Invoke-Command -ComputerName $hciNodes.name -ScriptBlock {
 ################ Register Azure Stack HCI using Powershell ################
 # https://docs.microsoft.com/en-us/azure-stack/hci/deploy/register-with-azure#register-a-cluster-using-powershell
 Install-Module -Name Az.StackHCI
-Register-AzStackHCI -SubscriptionId $subscriptionID -ComputerName $hciNodes[0].name -ResourceGroupName $targetResourceGroup #-TenantId "<tenant_id>" -Region "<region>"
+Register-AzStackHCI -SubscriptionId $subscriptionID -ComputerName $firstNode.name -ResourceGroupName $targetResourceGroup #-TenantId "<tenant_id>" -Region "<region>"
 
 ################ Create VMs for testing ################
-Invoke-Command -ComputerName $hciNodes[0].name -ScriptBlock {
+Invoke-Command -ComputerName $firstNode.name -ScriptBlock {
     $newVolumeName = $using:newVolumeName
     $isoFile = "$using:isoFileDestination\ws2019.iso"
     $vhdPath = "c:\Clusterstorage\$newVolumeName\VMs"
@@ -137,12 +138,14 @@ Invoke-Command -ComputerName $hciNodes[0].name -ScriptBlock {
 }
 
 
-etsn ashci-hv0
-Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
-Install-Module -Name PowerShellGet -Force
-exit
-etsn ashci-hv0
-Install-Module -Name AksHci -Repository PSGallery -AcceptLicense
+Invoke-Command -ComputerName $firstNode.name -ScriptBlock {
+    Install-PackageProvider Nuget -Force -Verbose
+    Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+    Install-Module -Name PowerShellGet -Force
+}
+Invoke-Command -ComputerName $firstNode.name -ScriptBlock {
+    Install-Module -Name AksHci -Repository PSGallery -AcceptLicense
+}
 Connect-AzAccount -UseDeviceAuthentication
 Set-AzContext -Subscription $subscriptionID
 Register-AzResourceProvider -ProviderNamespace Microsoft.Kubernetes
