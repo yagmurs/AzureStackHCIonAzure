@@ -161,8 +161,7 @@ Invoke-Command -ComputerName $firstNode.name -ScriptBlock {
 ################ Run following from one of Azure Stack HCI nodes using RDP ################
 $VerbosePreference = "Continue"
 Install-Module -Name AksHci -Repository PSGallery -AcceptLicense
-Connect-AzAccount -UseDeviceAuthentication
-Set-AzContext -Subscription $subscriptionID
+Connect-AzAccount -Tenant $tenantId -Subscription $subscriptionID -UseDeviceAuthentication
 Register-AzResourceProvider -ProviderNamespace Microsoft.Kubernetes
 Register-AzResourceProvider -ProviderNamespace Microsoft.KubernetesConfiguration
 Get-AzResourceProvider -ProviderNamespace Microsoft.Kubernetes
@@ -175,6 +174,34 @@ Set-AksHciConfig -imageDir c:\clusterstorage\volume1\ImageStore -workingDir c:\C
 Set-AksHciRegistration -subscriptionId $subscriptionID -resourceGroupName $targetResourceGroup -SkipLogin
 Install-AksHci
 
-New-AksHciCluster -Name w-1 -nodePoolName lp1 -nodeCount 1 -osType Linux
+# Create new Workload cluster without load balancer and onboard to Azure Arc
+$lbCfg=New-AksHciLoadBalancerSetting -name "noLb" -loadBalancerSku "none"
+New-AksHciCluster -Name w-1 -nodePoolName lp1 -nodeCount 1 -osType Linux -loadBalancerSettings $lbCfg
+Set-AksHciRegistration -SubscriptionId $subscriptionID -TenantId $tenantId -ResourceGroupName $targetResourceGroup -SkipLogin
 Enable-AksHciArcConnection -Name w-1
+
+Get-AksHciCredential -Name w-1
+
+#Deploy Metallb Load balancer to workload cluster
+kubectl create namespace metallb-system
+helm repo add metallb https://metallb.github.io/metallb
+@"
+configInline:
+  address-pools:
+  - name: default
+    protocol: layer2
+    addresses:
+    - 192.168.2.100-192.168.2.150
+"@ | Out-File -Encoding utf8 -FilePath .\values.yaml
+helm install metallb metallb/metallb -f .\values.yaml --namespace metallb-system
+
+# Test LB..
+kubectl.exe apply -f https://raw.githubusercontent.com/yagmurs/kubernetes/main/deploy/nginx-deployment.yaml
+
+kubectl get pods -A
+kubectl get svc -A
+iwr http://192.168.2.100 -UseBasicParsing
+
 #endregion
+
+
