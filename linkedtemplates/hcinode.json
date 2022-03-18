@@ -11,7 +11,7 @@
         "managementSubnetResourceId": {
             "type": "string"
         },
-        "smbSubnetResourceId": {
+        "vmSubnetResourceId": {
             "type": "string"
         },
         "imageResourceId": {
@@ -87,7 +87,7 @@
     },
     "functions": [],
     "variables": {
-        "smbNicNameSuffix": "-smb-nic",
+        "vmNicNameSuffix": "-vm-nic",
         "managementNicNameSuffix": "-management-nic"
     },
     "resources": [
@@ -112,18 +112,18 @@
             }
         },
         {
-            "name": "[concat(parameters('vmName'), variables('smbNicNameSuffix'))]",
+            "name": "[concat(parameters('vmName'), variables('vmNicNameSuffix'))]",
             "type": "Microsoft.Network/networkInterfaces",
             "apiVersion": "2020-11-01",
             "location": "[resourceGroup().location]",
             "properties": {
                 "ipConfigurations": [
                     {
-                        "name": "[concat('ipconfig1', variables('smbNicNameSuffix'))]",
+                        "name": "[concat('ipconfig1', variables('vmNicNameSuffix'))]",
                         "properties": {
                             "privateIPAllocationMethod": "Dynamic",
                             "subnet": {
-                                "id": "[parameters('smbSubnetResourceId')]"
+                                "id": "[parameters('vmSubnetResourceId')]"
                             }                            
                         }
                     }
@@ -138,7 +138,7 @@
             "location": "[resourceGroup().location]",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('vmName'), variables('managementNicNameSuffix')))]",
-                "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('vmName'), variables('smbNicNameSuffix')))]"
+                "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('vmName'), variables('vmNicNameSuffix')))]"
             ],
             "properties": {
                 "licenseType": "[if(bool(parameters('enableHybridBenefitServerLicenses')), 'Windows_Server', 'None')]",
@@ -189,7 +189,7 @@
                             }
                         },
                         {
-                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('vmName'), variables('smbNicNameSuffix')))]",
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('vmName'), variables('vmNicNameSuffix')))]",
                             "properties": {
                                 "primary": false
                             }

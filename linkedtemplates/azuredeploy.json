@@ -181,7 +181,7 @@
                     "imageSku": {
                         "value": "[variables('dcImageSku')]"
                     },
-                    "managementSubnetResourceId": {
+                    "vmSubnetResourceId": {
                         "value": "[reference('vnet-with-predefined-nsg').outputs.vmSubnetResourceId.value]"
                     },
                     "adminUsername": {
