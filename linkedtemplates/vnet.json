@@ -69,7 +69,8 @@
     "variables": {
         "dnsServersArray": "[if(equals(parameters('dnsServer'), 'usevnetdefaults'), 'null', array(if(contains(parameters('dnsServer'), ','), split(parameters('dnsServer'), ','), parameters('dnsServer'))))]",
         "managementSubnetNsgName": "[concat(parameters('managementSubnetName'), '-nsg')]",
-        "vmSubnetNsgName": "[concat(parameters('vmSubnetName'), '-nsg')]"
+        "vmSubnetNsgName": "[concat(parameters('vmSubnetName'), '-nsg')]",
+        "vmSubnetRouteTableName": "[concat(parameters('vmSubnetName'), '-rt')]"
     },
     "resources": [
         {
@@ -133,7 +134,7 @@
             }
         },
         {
-            "name": "[concat(parameters('vmSubnetName'), '-rt')]",
+            "name": "[variables('vmSubnetRouteTableName')]",
             "type": "Microsoft.Network/routeTables",
             "apiVersion": "2020-11-01",
             "location": "[parameters('location')]",
@@ -184,7 +185,7 @@
                         "properties": {
                             "addressPrefix": "[parameters('vmSubnetAddressPrefix')]",
                             "routeTable": {
-                                "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/routeTables', concat(parameters('vmSubnetName'), '-rt'))]"
+                                "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/routeTables', variables('vmSubnetRouteTableName'))]"
                             },
                             "networkSecurityGroup": {
                                 "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/networkSecurityGroups', variables('vmSubnetNsgName'))]"
@@ -196,7 +197,7 @@
             "dependsOn": [
                 "[resourceId('Microsoft.Network/networkSecurityGroups', variables('managementSubnetNsgName'))]",
                 "[resourceId('Microsoft.Network/networkSecurityGroups', variables('vmSubnetNsgName'))]",
-                "[resourceId('Microsoft.Network/routeTables', concat(parameters('vmSubnetName'), '-rt'))]"
+                "[resourceId('Microsoft.Network/routeTables', variables('vmSubnetRouteTableName'))]"
             ]
         }
     ],
