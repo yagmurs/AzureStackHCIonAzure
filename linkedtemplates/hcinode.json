@@ -128,7 +128,8 @@
                         }
                     }
                 ],
-                "enableAcceleratedNetworking": true
+                "enableAcceleratedNetworking": true,
+                "enableIPForwarding": true
             }
         },
         {
