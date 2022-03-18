@@ -30,9 +30,9 @@
                 "description": "description"
             }
         },
-        "smbSubnetName": {
+        "vmSubnetName": {
             "type": "string",
-            "defaultValue": "smb-subnet",
+            "defaultValue": "vm-subnet",
             "metadata": {
                 "description": "description"
             }
@@ -44,7 +44,7 @@
                 "description": "description"
             }
         },
-        "smbSubnetAddressPrefix": {
+        "vmSubnetAddressPrefix": {
             "type": "string",
             "defaultValue": "10.255.255.0/24",
             "metadata": {
@@ -69,7 +69,7 @@
     "variables": {
         "dnsServersArray": "[if(equals(parameters('dnsServer'), 'usevnetdefaults'), 'null', array(if(contains(parameters('dnsServer'), ','), split(parameters('dnsServer'), ','), parameters('dnsServer'))))]",
         "managementSubnetNsgName": "[concat(parameters('managementSubnetName'), '-nsg')]",
-        "smbSubnetNsgName": "[concat(parameters('smbSubnetName'), '-nsg')]"
+        "vmSubnetNsgName": "[concat(parameters('vmSubnetName'), '-nsg')]"
     },
     "resources": [
         {
@@ -103,45 +103,57 @@
             }
         },
         {
-            "name": "[variables('smbSubnetNsgName')]",
+            "name": "[variables('vmSubnetNsgName')]",
             "type": "Microsoft.Network/networkSecurityGroups",
             "apiVersion": "2020-11-01",
             "location": "[parameters('location')]",
             "properties": {
                 "securityRules": [
                     {
-                        "name": "Allow-Vnet-Outbound",
+                        "name": "Allow-Management-Inbound",
                         "properties": {
-                            "description": "description",
+                            "description": "Allow Management traffic from trusted Ip address",
                             "protocol": "*",
                             "sourcePortRange": "*",
-                            "destinationPortRange": "*",
-                            "sourceAddressPrefix": "VirtualNetwork",
-                            "destinationAddressPrefix": "VirtualNetwork",
-                            "access": "Allow",
-                            "priority": 1001,
-                            "direction": "Outbound"
-                        }
-                    },
-                    {
-                        "name": "Deny-All-Outbound",
-                        "properties": {
-                            "description": "description",
-                            "protocol": "*",
-                            "sourcePortRange": "*",
-                            "destinationPortRange": "*",
-                            "sourceAddressPrefix": "*",
+                            "destinationPortRanges": [
+                                "80",
+                                "443",
+                                "3389",
+                                "5985",
+                                "5986"
+                            ],
+                            "sourceAddressPrefix": "[parameters('myIpForRdp')]",
                             "destinationAddressPrefix": "*",
-                            "access": "Deny",
-                            "priority": 4002,
-                            "direction": "Outbound"
+                            "access": "Allow",
+                            "priority": 301,
+                            "direction": "Inbound"
                         }
                     }
                 ]
             }
         },
         {
-            "name": "[parameters('vNetName')]",
+            "name": "nested-rt",
+            "type": "Microsoft.Network/routeTables",
+            "apiVersion": "2020-11-01",
+            "location": "[parameters('location')]",
+            "tags": {},
+            "properties": {
+                "routes": [
+                    {
+                        "name": "nested-route",
+                        "properties": {
+                            "addressPrefix": "192.168.0.0/16",
+                            "nextHopType": "VirtualAppliance",
+                            "nextHopIpAddress": "10.255.255.4"
+                        }
+                    }
+                ],
+                "disableBgpRoutePropagation": true
+            }
+        },
+        {
+            "name": "[concat(parameters('vmSubnetName'), '-rt')]",
             "type": "Microsoft.Network/virtualNetworks",
             "apiVersion": "2020-11-01",
             "location": "[parameters('location')]",
@@ -168,11 +180,14 @@
                         }
                     },
                     {
-                        "name": "[parameters('smbSubnetName')]",
+                        "name": "[parameters('vmSubnetName')]",
                         "properties": {
-                            "addressPrefix": "[parameters('smbSubnetAddressPrefix')]",
+                            "addressPrefix": "[parameters('vmSubnetAddressPrefix')]",
+                            "routeTable": {
+                                "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/routeTables', concat(parameters('vmSubnetName'), '-rt'))]"
+                            },
                             "networkSecurityGroup": {
-                                "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/networkSecurityGroups', variables('smbSubnetNsgName'))]"
+                                "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/networkSecurityGroups', variables('vmSubnetNsgName'))]"
                             }
                         }
                     }
@@ -180,7 +195,8 @@
             },
             "dependsOn": [
                 "[resourceId('Microsoft.Network/networkSecurityGroups', variables('managementSubnetNsgName'))]",
-                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('smbSubnetNsgName'))]"
+                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('vmSubnetNsgName'))]",
+                "[resourceId('Microsoft.Network/routeTables', concat(parameters('vmSubnetName'), '-rt'))]"
             ]
         }
     ],
@@ -193,9 +209,9 @@
             "type": "string",
             "value": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vNetName'), parameters('managementSubnetName'))]"
         },
-        "smbSubnetResourceId": {
+        "vmSubnetResourceId": {
             "type": "string",
-            "value": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vNetName'), parameters('smbSubnetName'))]"
+            "value": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vNetName'), parameters('vmSubnetName'))]"
         }
     }
 }

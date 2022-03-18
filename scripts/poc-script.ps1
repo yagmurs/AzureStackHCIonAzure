@@ -204,4 +204,18 @@ iwr http://192.168.2.100 -UseBasicParsing
 
 #endregion
 
+dc subnet degistir
+address space degistir /23 --> /22
+lan subnet ekle
+route tablosu ekle
+route tablosunu lana bagla
+
+$lanNetadapterName = "lan"
+Add-NetIntent -Name $vmSwitchName -Compute -ClusterName $clusterName -AdapterName $lanNetadapterName
+Add-VMNetworkAdapter -ManagementOS -SwitchName $vmSwitchName -Name nestedgw
+New-NetNat -Name nat -InternalIPInterfaceAddressPrefix 192.168.0.0/16
+New-NetRoute -DestinationPrefix 10.255.254/22 -InterfaceAlias $lanNetadapterName -AddressFamily IPv4 -NextHop 10.255.253.1
+New-NetRoute -DestinationPrefix 10.255.254.0/24 -InterfaceAlias $managementNetadapterName -AddressFamily IPv4 -NextHop 10.255.254.1
+Set-NetIPInterface -InterfaceAlias $lanNetadapterName, $managementNetadapterName, 'vEthernet (nestedgw)' -Forwarding Enabled
+Get-NetIPInterface | select ifIndex,InterfaceAlias,AddressFamily,ConnectionState,Forwarding | Sort-Object -Property IfIndex | Format-Table
 

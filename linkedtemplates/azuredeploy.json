@@ -182,7 +182,7 @@
                         "value": "[variables('dcImageSku')]"
                     },
                     "managementSubnetResourceId": {
-                        "value": "[reference('vnet-with-predefined-nsg').outputs.managementSubnetResourceId.value]"
+                        "value": "[reference('vnet-with-predefined-nsg').outputs.vmSubnetResourceId.value]"
                     },
                     "adminUsername": {
                         "value": "[parameters('adminUsername')]"
@@ -299,8 +299,8 @@
                     "managementSubnetResourceId": {
                         "value": "[reference('vnet-with-predefined-nsg').outputs.managementSubnetResourceId.value]"
                     },
-                    "smbSubnetResourceId": {
-                        "value": "[reference('vnet-with-predefined-nsg').outputs.smbSubnetResourceId.value]"
+                    "vmSubnetResourceId": {
+                        "value": "[reference('vnet-with-predefined-nsg').outputs.vmSubnetResourceId.value]"
                     },
                     "imageResourceId": {
                         "value": "[reference('prepare-gallery-image').outputs.imageResourceId.value]"
@@ -375,9 +375,9 @@
             "type": "string",
             "value": "[reference('vnet-with-predefined-nsg').outputs.managementSubnetResourceId.value]"
         },
-        "outputFromLinkedTemplate-vnet-with-predefined-nsg-smbSubnetResourceId": {
+        "outputFromLinkedTemplate-vnet-with-predefined-nsg-vmSubnetResourceId": {
             "type": "string",
-            "value": "[reference('vnet-with-predefined-nsg').outputs.smbSubnetResourceId.value]"
+            "value": "[reference('vnet-with-predefined-nsg').outputs.vmSubnetResourceId.value]"
         }
     }
 }
