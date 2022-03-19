@@ -146,7 +146,7 @@
                         "properties": {
                             "addressPrefix": "192.168.0.0/16",
                             "nextHopType": "VirtualAppliance",
-                            "nextHopIpAddress": "10.255.255.4"
+                            "nextHopIpAddress": "10.255.255.5"
                         }
                     }
                 ],

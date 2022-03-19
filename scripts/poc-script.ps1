@@ -89,7 +89,7 @@ Import-Module NetworkATC
 Add-NetIntent -Name $vmSwitchName -Management -Compute -ClusterName $clusterName -AdapterName $managementNetadapterName
 
 ################ Add additional vNic to enable NAT to allow VMs to access to internet ################
-Invoke-Command -ComputerName $hciNodes.name -ScriptBlock {
+Invoke-Command -ComputerName $($hciNodes.name -ne $clusterName) -ScriptBlock {
 
     do
     {
