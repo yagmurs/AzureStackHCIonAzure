@@ -5,7 +5,7 @@ $subscriptionID = "<subscription_id>"
 $targetResourceGroup = "<resource_group_name>"
 
 $managementNetadapterName = "management"
-$smbNetadapterName = "smb"
+$lanNetadapterName = "lan"
 $vmSwitchName = "vmswitch"
 $clusterName = "cls1"
 $natNetworkCIDR =  "192.168.0.0/16"
@@ -42,8 +42,13 @@ Invoke-Command -ComputerName $hciNodes.name -ScriptBlock {
     New-NetFirewallRule -Name BlockAzureIMDS -DisplayName "Block access to Azure IMDS" -Enabled True -Profile Any -Direction Outbound -Action Block -RemoteAddress 169.254.169.254
 
     $managementNetadapterName = $using:managementNetadapterName
-    $smbNetadapterName = $using:smbNetadapterName
+    $lanNetadapterName = $using:lanNetadapterName
     $vmSwitchName = $using:vmSwitchName
+    $nestedNetAdapterName = "nestedgw"
+
+    $natPrefix = $($using:natNetworkCIDR).Split("/")[1]
+    $natIP = $($using:natNetworkCIDR).Replace($("0/" + "$natPrefix"), "1")
+    $natNetworkCIDR = $using:natNetworkCIDR
     
     Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
     choco feature enable -n=allowGlobalConfirmation
@@ -52,8 +57,19 @@ Invoke-Command -ComputerName $hciNodes.name -ScriptBlock {
 
     Install-WindowsFeature -Name Hyper-V, Failover-Clustering, FS-Data-Deduplication, Bitlocker, Data-Center-Bridging, RSAT-AD-PowerShell, NetworkATC -IncludeAllSubFeature -IncludeManagementTools -Verbose
     Get-NetIPAddress | Where-Object IPv4Address -like 10.255.254.* | Get-NetAdapter | Rename-NetAdapter -NewName $managementNetadapterName
-    Get-NetIPAddress | Where-Object IPv4Address -like 10.255.255.* | Get-NetAdapter | Rename-NetAdapter -NewName $smbNetadapterName
-    Get-NetAdapter $smbNetadapterName | Set-DNSClient -RegisterThisConnectionsAddress $False
+    Get-NetIPAddress | Where-Object IPv4Address -like 10.255.255.* | Get-NetAdapter | Rename-NetAdapter -NewName $lanNetadapterName
+    Get-NetAdapter $lanNetadapterName | Set-DNSClient -RegisterThisConnectionsAddress $False
+
+    New-VMSwitch -Name $lanNetadapterName -NetAdapterName $lanNetadapterName -AllowManagementOS $true -EnableEmbeddedTeaming $true
+
+    ################ facilitate new vNic to enable NAT for internet access vNet connectivity ################
+    Add-VMNetworkAdapter -ManagementOS -SwitchName $lanNetadapterName -Name $nestedNetAdapterName
+    New-NetIPAddress -IPAddress $natIP -PrefixLength $natPrefix -InterfaceAlias "vEthernet `($nestedNetAdapterName`)"
+    New-NetNat -Name $lanNetadapterName -InternalIPInterfaceAddressPrefix $natNetworkCIDR
+    New-NetRoute -DestinationPrefix 10.255.254.0/24 -InterfaceAlias $managementNetadapterName -AddressFamily IPv4 -NextHop 10.255.254.1
+    New-NetRoute -DestinationPrefix 10.255.254.0/23 -InterfaceAlias "vEthernet `($lanNetadapterName`)" -AddressFamily IPv4 -NextHop 10.255.255.1
+    Set-NetIPInterface -InterfaceAlias "vEthernet `($lanNetadapterName`)", $managementNetadapterName, "vEthernet `($nestedNetAdapterName`)" -Forwarding Enabled
+    #Get-NetIPInterface | select ifIndex,InterfaceAlias,AddressFamily,ConnectionState,Forwarding | Sort-Object -Property IfIndex | Format-Table
 }
 
 ################ Create New Azure Stack HCI cluster ################
@@ -169,7 +185,7 @@ Get-AzResourceProvider -ProviderNamespace Microsoft.KubernetesConfiguration
 Initialize-AksHciNode -Verbose
 #static IP
 $switch = Get-VmSwitch 
-$vnet = New-AksHciNetworkSetting -name myvnet -vSwitchName $switch.Name -k8sNodeIpPoolStart "192.168.1.0" -k8sNodeIpPoolEnd "192.168.1.255" -vipPoolStart "192.168.2.0" -vipPoolEnd "192.168.2.255" -ipAddressPrefix "192.168.0.0/16" -gateway "192.168.0.1" -dnsServers "10.255.254.4" -vlanId 0
+$vnet = New-AksHciNetworkSetting -name myvnet -vSwitchName $switch.Name -k8sNodeIpPoolStart "192.168.1.0" -k8sNodeIpPoolEnd "192.168.1.255" -vipPoolStart "192.168.2.0" -vipPoolEnd "192.168.2.255" -ipAddressPrefix "192.168.0.0/16" -gateway "192.168.0.1" -dnsServers "10.255.255.4" -vlanId 0
 Set-AksHciConfig -imageDir c:\clusterstorage\volume1\ImageStore -workingDir c:\ClusterStorage\Volume1\ -cloudConfigLocation c:\clusterstorage\volume1\Config -vnet $vnet -cloudservicecidr "10.255.254.101/24"
 Set-AksHciRegistration -subscriptionId $subscriptionID -resourceGroupName $targetResourceGroup -SkipLogin
 Install-AksHci
@@ -210,12 +226,27 @@ lan subnet ekle
 route tablosu ekle
 route tablosunu lana bagla
 
-$lanNetadapterName = "lan"
+$lanNetadapterName = "smb"
 Add-NetIntent -Name $vmSwitchName -Compute -ClusterName $clusterName -AdapterName $lanNetadapterName
-Add-VMNetworkAdapter -ManagementOS -SwitchName $vmSwitchName -Name nestedgw
+Add-VMNetworkAdapter -ManagementOS -SwitchName 'ComputeSwitch(vmswitch)' -Name nestedgw
+Add-VMNetworkAdapter -ManagementOS -SwitchName 'ComputeSwitch(vmswitch)' -Name smb
+New-NetIPAddress -IPAddress 192.168.0.1 -PrefixLength 16 -InterfaceAlias 'vEthernet (nestedgw)'
+New-NetIPAddress -IPAddress 10.255.255.5 -PrefixLength 24 -InterfaceAlias 'vEthernet (smb)'
 New-NetNat -Name nat -InternalIPInterfaceAddressPrefix 192.168.0.0/16
-New-NetRoute -DestinationPrefix 10.255.254/22 -InterfaceAlias $lanNetadapterName -AddressFamily IPv4 -NextHop 10.255.253.1
+New-NetRoute -DestinationPrefix 10.255.254.0/23 -InterfaceAlias $lanNetadapterName -AddressFamily IPv4 -NextHop 10.255.255.1
 New-NetRoute -DestinationPrefix 10.255.254.0/24 -InterfaceAlias $managementNetadapterName -AddressFamily IPv4 -NextHop 10.255.254.1
-Set-NetIPInterface -InterfaceAlias $lanNetadapterName, $managementNetadapterName, 'vEthernet (nestedgw)' -Forwarding Enabled
+Set-NetIPInterface -InterfaceAlias 'vEthernet (smb)', $managementNetadapterName, 'vEthernet (nestedgw)' -Forwarding Enabled
+Get-NetIPInterface | select ifIndex,InterfaceAlias,AddressFamily,ConnectionState,Forwarding | Sort-Object -Property IfIndex | Format-Table
+
+
+$lanNetadapterName = "lan"
+$nestedNetAdapterName = "nestedgw"
+New-VMSwitch -Name $lanNetadapterName -NetAdapterName $lanNetadapterName -AllowManagementOS $true -EnableEmbeddedTeaming $true
+Add-VMNetworkAdapter -ManagementOS -SwitchName $lanNetadapterName -Name $nestedNetAdapterName
+New-NetIPAddress -IPAddress $natIP -PrefixLength $natPrefix -InterfaceAlias "vEthernet `($nestedNetAdapterName`)"
+New-NetNat -Name nat -InternalIPInterfaceAddressPrefix $natNetworkCIDR
+New-NetRoute -DestinationPrefix 10.255.254.0/24 -InterfaceAlias $managementNetadapterName -AddressFamily IPv4 -NextHop 10.255.254.1
+New-NetRoute -DestinationPrefix 10.255.254.0/23 -InterfaceAlias "vEthernet `($lanNetadapterName`)" -AddressFamily IPv4 -NextHop 10.255.255.1
+Set-NetIPInterface -InterfaceAlias "vEthernet `($lanNetadapterName`)", $managementNetadapterName, "vEthernet `($nestedNetAdapterName`)" -Forwarding Enabled
 Get-NetIPInterface | select ifIndex,InterfaceAlias,AddressFamily,ConnectionState,Forwarding | Sort-Object -Property IfIndex | Format-Table
 
