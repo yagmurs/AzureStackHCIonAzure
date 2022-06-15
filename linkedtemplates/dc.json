@@ -181,8 +181,10 @@
                                 "domainCreds": {
                                     "userName": "[parameters('adminUsername')]",
                                     "password": "[parameters('adminPassword')]"
-                                }*/
+                                    
+                                }
                             }
+                            */
                         }
                     }
                 }
