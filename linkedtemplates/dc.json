@@ -176,8 +176,7 @@
                                 "domainCreds": {
                                     "userName": "[parameters('adminUsername')]",
                                     "password": "[parameters('adminPassword')]"
-                                },
-                                "configurationUrlSasToken": "[parameters('_artifactsLocationSasToken')]"
+                                }
                             }
                         }
                     }
