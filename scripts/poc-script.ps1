@@ -54,6 +54,8 @@ Invoke-Command -ComputerName $hciNodes.name -ScriptBlock {
     choco feature enable -n=allowGlobalConfirmation
     #choco install powershell-core
     #choco install azure-cli
+    choco install kubernetes-cli
+    choco install kubernetes-helm
 
     Install-WindowsFeature -Name Hyper-V, Failover-Clustering, FS-Data-Deduplication, Bitlocker, Data-Center-Bridging, RSAT-AD-PowerShell, NetworkATC -IncludeAllSubFeature -IncludeManagementTools -Verbose
     Get-NetIPAddress | Where-Object IPv4Address -like 10.255.254.* | Get-NetAdapter | Rename-NetAdapter -NewName $managementNetadapterName
@@ -95,43 +97,6 @@ $hciNodes = (Get-ADComputer -Filter { OperatingSystem -Like '*Azure Stack HCI*'}
 $hciNodes | Set-ADComputer -PrincipalsAllowedToDelegateToAccount $wacObject -Verbose
 Get-ADComputer -Identity $clusterName | Set-ADComputer -PrincipalsAllowedToDelegateToAccount $wacObject -Verbose
 Get-ClusterGroup -Name "Cluster Group" -Cluster $clusterName | Move-ClusterGroup -ErrorAction SilentlyContinue
-
-################ Setup Intent based network config on Azure Stack HCI Cluster ################
-## Workaround to run NetworkATC cmdlets remotely
-Copy-Item "\\$($firstNode.name)\c$\Windows\System32\WindowsPowerShell\v1.0\Modules\NetworkATC\" -Destination C:\Windows\System32\WindowsPowerShell\v1.0\Modules\NetworkATC -Recurse -Force -Verbose
-Copy-Item "\\$($firstNode.name)\c$\Windows\System32\NetworkAtc.Driver.dll" -Destination "C:\Windows\System32\" -Force -Verbose
-Copy-Item "\\$($firstNode.name)\c$\Windows\System32\Newtonsoft.Json.dll" -Destination "C:\Windows\System32\" -Force -Verbose
-Import-Module NetworkATC
-Add-NetIntent -Name $vmSwitchName -Management -Compute -ClusterName $clusterName -AdapterName $managementNetadapterName
-
-################ Add additional vNic to enable NAT to allow VMs to access to internet ################
-Invoke-Command -ComputerName $($hciNodes.name -ne $clusterName) -ScriptBlock {
-
-    do
-    {
-        $switch = Get-VMSwitch
-        Write-Verbose "Waiting for VM Switch" -Verbose
-        Start-Sleep -Seconds 5
-    }
-    until ($switch.count -gt 0)
-    
-    $natPrefix = $($using:natNetworkCIDR).Split("/")[1]
-    $natIP = $($using:natNetworkCIDR).Replace($("0/" + "$natPrefix"), "1")
-    $natNetworkCIDR = $using:natNetworkCIDR
-
-    Write-Verbose "Adding vNic for NAT"
-    Add-VMNetworkAdapter -SwitchName  $switch.Name -Name nat -ManagementOS
-
-    # Set IP Address to new vNic
-    Write-Verbose "Set IP Address to new vNic: nat"
-    $intIndex = (Get-NetAdapter | Where-Object { $_.Name -match "nat"}).ifIndex
-    New-NetIPAddress -IPAddress $natIP -PrefixLength $natPrefix -InterfaceIndex $intIndex -ErrorAction SilentlyContinue | Out-Null
-
-    # Create NetNAT
-    Write-Verbose "Creating new NetNat"
-    New-NetNat -Name nat  -InternalIPInterfaceAddressPrefix $natNetworkCIDR -ErrorAction SilentlyContinue | Out-Null
-}
-
 
 ################ Register Windows Admin Center with Azure ################
 # https://docs.microsoft.com/en-us/azure-stack/hci/deploy/register-with-azure#prerequisites-for-cluster-registration
@@ -207,7 +172,7 @@ configInline:
   - name: default
     protocol: layer2
     addresses:
-    - 192.168.2.100-192.168.2.150
+    - 192.168.3.0-192.168.255
 "@ | Out-File -Encoding utf8 -FilePath .\values.yaml
 helm install metallb metallb/metallb -f .\values.yaml --namespace metallb-system
 

@@ -1,5 +1,12 @@
+#https://docs.microsoft.com/en-us/azure/azure-arc/kubernetes/azure-rbac
+
+$subscriptionID = "123"
+
+az extension add --name connectedk8s
+az login --use-device-code
+
 $CLUSTER_NAME="w-1"
-$TENANT_ID="0447fa3f-36f0-4826-8a07-6dd19191ace3"
+$TENANT_ID="<tenant id>"
 $SERVER_APP_ID=$(az ad app create --display-name "${CLUSTER_NAME}Server" --identifier-uris "api://${TENANT_ID}/ClientAnyUniqueSuffix" --query appId -o tsv)
 $SERVER_APP_ID
 
@@ -16,10 +23,25 @@ $CLIENT_APP_ID
 
 az ad sp create --id "${CLIENT_APP_ID}"
 
-az ad app show --id "${SERVER_APP_ID}" --query "oauth2Permissions[0].id" -o tsv
+$oauthpermissionID = az ad app show --id "${SERVER_APP_ID}" --query "oauth2Permissions[0].id" -o tsv
 
-az ad app permission add --id "${CLIENT_APP_ID}" --api "${SERVER_APP_ID}" --api-permissions a4fbac6e-aa3d-4cbd-85cd-59bb26e0a90e=Scope
+az ad app permission add --id "${CLIENT_APP_ID}" --api "${SERVER_APP_ID}" --api-permissions $oauthpermissionID`=Scope
 az ad app permission grant --id "${CLIENT_APP_ID}" --api "${SERVER_APP_ID}"
+
+@"
+{
+    "Name": "Read authorization",
+    "IsCustom": true,
+    "Description": "Read authorization",
+    "Actions": ["Microsoft.Authorization/*/read"],
+    "NotActions": [],
+    "DataActions": [],
+    "NotDataActions": [],
+    "AssignableScopes": [
+      "/subscriptions/$subscriptionID"
+    ]
+}
+"@ | Out-File -Encoding utf8 -FilePath .\accesscheck.yaml
 
 $ROLE_ID=$(az role definition create --role-definition ./accessCheck.json --query id -o tsv)
 
@@ -28,6 +50,29 @@ az role assignment create --role "${ROLE_ID}" --assignee "${SERVER_APP_ID}" --sc
 az config set extension.use_dynamic_install=yes_without_prompt
 
 az connectedk8s enable-features -n w-1 -g sil-we1 --features azure-rbac --app-id "${SERVER_APP_ID}" --app-secret "${SERVER_APP_SECRET}"
+
+$authBase64 = kubectl get secret azure-arc-guard-manifests -n kube-system -o yaml
+$authBase64 | out-file -FilePath azure-arc-guard-manifests.yaml -Encoding utf8
+notepad.exe .\azure-arc-guard-manifests.yaml # remove namespace section
+
+<#
+ Switch to Management Cluster at this point
+#>
+
+$env:KUBECONFIG = (Get-AksHciConfig).kva.kubeconfig
+kubectl apply -f azure-arc-guard-manifests.yaml
+
+kubectl get kcp 
+kubectl edit kcp w-1-control-plane # edit config accordingly and amend mentioned changes
+
+$env:KUBECONFIG = ""
+
+$ARM_ID = az resource list -g sil-we1 -n w-1 --query "[0].id" -o tsv
+
+az role assignment create --role "Azure Arc Enabled Kubernetes Cluster User Role" --assignee "6c2cae58-f2c7-4abb-aee0-eb7808ace117" --scope $ARM_ID
+az role assignment create --role "Azure Arc Kubernetes Viewer" --assignee "6c2cae58-f2c7-4abb-aee0-eb7808ace117" --scope $ARM_ID/namespaces/azure-arc
+
+
 
 $authnBase64 = kubectl get secret azure-arc-guard-manifests -n kube-system -o=jsonpath='{.data.guard-authn-webhook\.yaml}'
 $authzBase64 = kubectl get secret azure-arc-guard-manifests -n kube-system -o=jsonpath='{.data.guard-authz-webhook\.yaml}'

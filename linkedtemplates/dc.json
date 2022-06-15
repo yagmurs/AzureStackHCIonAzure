@@ -168,16 +168,20 @@
                                 "dataCollection": "enable"
                             },
                             "configurationArguments": {
-                                "domainname": "[parameters('activeDirectoryFqdn')]"
-                            }
-                        },
-                        "protectedSettings": {
-                            "configurationUrlSasToken": "[parameters('_artifactsLocationSasToken')]",
-                            "configurationArguments": {
+                                "domainname": "[parameters('activeDirectoryFqdn')]",
                                 "domainCreds": {
                                     "userName": "[parameters('adminUsername')]",
                                     "password": "[parameters('adminPassword')]"
                                 }
+                            }
+                        },
+                        "protectedSettings": {
+                            "configurationUrlSasToken": "[parameters('_artifactsLocationSasToken')]"/*,
+                            "configurationArguments": {
+                                "domainCreds": {
+                                    "userName": "[parameters('adminUsername')]",
+                                    "password": "[parameters('adminPassword')]"
+                                }*/
                             }
                         }
                     }
