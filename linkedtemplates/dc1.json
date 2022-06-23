@@ -1,0 +1,187 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "_artifactsLocation": {
+            "type": "string"
+        },
+        "_artifactsLocationSasToken": {
+            "type": "securestring"
+        },
+        "vmSubnetResourceId": {
+            "type": "string"
+        },
+        "vmName": {
+            "type": "string"
+        },
+        "adminUsername": {
+            "type": "string"
+        },
+        "adminPassword": {
+            "type": "securestring"
+        },
+        "activeDirectoryFqdn": {
+            "type": "string"
+        },
+        "vmSize": {
+            "type": "string",
+            "metadata": {
+                "description": "vmSize"
+            },
+            "defaultValue": "Standard_B2ms"
+        },
+        "storageType": {
+            "type": "string",
+            "allowedValues": [
+                "Premium_LRS",
+                "Standard_LRS",
+                "StandardSSD_LRS",
+                "UltraSSD_LRS"
+            ],
+            "defaultValue": "Standard_LRS"
+        },
+        "imageSku": {
+            "type": "string",
+            "defaultValue": "2022-datacenter-azure-edition-smalldisk" // "2022-datacenter-azure-edition-core-smalldisk"
+        },
+        "enableHybridBenefitServerLicenses": {
+            "type": "bool"
+        },
+        "salt": {
+            "type": "string",
+            "defaultValue": "[utcNow()]"
+        }
+    },
+    "functions": [],
+    "variables": {
+        "vmNicNameSuffix": "-vm-nic"
+    },
+    "resources": [
+        {
+            "name": "[concat(parameters('vmName'), '-pip')]",
+            "type": "Microsoft.Network/publicIPAddresses",
+            "apiVersion": "2020-11-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "publicIPAllocationMethod": "Dynamic",
+                "dnsSettings": {
+                    "domainNameLabel": "[toLower(uniqueString(subscription().subscriptionId, resourceGroup().name, parameters('salt')))]"
+                }
+            }
+        },
+        {
+            "name": "[concat(parameters('vmName'), variables('vmNicNameSuffix'))]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2020-11-01",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses', concat(parameters('vmName'), '-pip'))]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "[concat('ipconfig1', variables('vmNicNameSuffix'))]",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "subnet": {
+                                "id": "[parameters('vmSubnetResourceId')]"
+                            },
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', concat(parameters('vmName'), '-pip'))]"
+                            }
+                        }
+                    }
+                ]
+            }
+            
+        },
+        {
+            "name": "[parameters('vmName')]",
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2021-07-01",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('vmName'), variables('vmNicNameSuffix')))]"
+            ],
+            "properties": {
+                "licenseType": "[if(bool(parameters('enableHybridBenefitServerLicenses')), 'Windows_Server', 'None')]",
+                "hardwareProfile": {
+                    "vmSize": "[parameters('vmSize')]"
+                },
+                "osProfile": {
+                    "computerName": "[parameters('vmName')]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "adminPassword": "[parameters('adminPassword')]"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "MicrosoftWindowsServer",
+                        "offer": "WindowsServer",
+                        "sku": "[parameters('imageSku')]",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "name": "[concat(parameters('vmName'), '-osdisk')]",
+                        "caching": "ReadWrite",
+                        "createOption": "FromImage",
+                        "managedDisk": {
+                            "storageAccountType": "[parameters('storageType')]"
+                        },
+                        "osType": "Windows"
+                    }
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('vmName'), variables('vmNicNameSuffix')))]"
+                        }
+                    ]
+                },
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": true
+                    }
+                }
+            },
+            "resources": [
+                {
+                    "name": "[concat(parameters('vmName'), '/DCPromo')]",
+                    "type": "Microsoft.Compute/virtualMachines/extensions",
+                    "apiVersion": "2019-03-01",
+                    "location": "[resourceGroup().location]",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Compute/virtualMachines', parameters('vmName'))]"
+                    ],
+                    "properties": {
+                        "publisher": "Microsoft.Powershell",
+                        "type": "DSC",
+                        "typeHandlerVersion": "2.19",
+                        "autoUpgradeMinorVersion": true,
+                        "settings": {
+                            "ModulesUrl": "[concat(parameters('_artifactsLocation'), '/DSC/dc.zip')]",
+                            "ConfigurationFunction": "dc.ps1\\domainsetup",
+                            "Properties": {
+                                "domainname": "[parameters('activeDirectoryFqdn')]",
+                                "domainCreds": {
+                                    "UserName": "[parameters('adminUsername')]",
+                                    "Password": "PrivateSettingsRef:AdminPassword"
+                                }
+                            }
+                        },
+                        "protectedSettings": {
+                            "Items": {
+                                "AdminPassword": "[parameters('adminPassword')]"
+                            }
+                        }
+                    }
+                }
+            ]
+        }
+    ],
+    "outputs": {
+        "dcIpAddress": {
+            "type": "string",
+            "value": "[reference(concat(parameters('vmName'), variables('vmNicNameSuffix'))).ipConfigurations[0].properties.privateIPAddress]"
+        }
+    }
+}
