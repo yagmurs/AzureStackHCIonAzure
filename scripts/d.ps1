@@ -8,3 +8,5 @@ New-AzResourceGroupDeployment -Name ashci -ResourceGroupName sil-we2 -TemplateUr
 
 Get-AzVMExtension -ResourceGroupName sil-we2 -VMName ashci-dc1 | Where-Object ExtensionType -eq DSC | Remove-AzVMExtension -Force -Verbose
 New-AzResourceGroupDeployment -Name ashci -ResourceGroupName sil-we2 -TemplateFile c:\temp\azuredeploy.json -TemplateParameterObject $param
+
+
