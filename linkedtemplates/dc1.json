@@ -42,7 +42,7 @@
         },
         "imageSku": {
             "type": "string",
-            "defaultValue": "2019-Datacenter" // "2022-datacenter-azure-edition-core-smalldisk"
+            "defaultValue": "2022-datacenter-azure-edition-core-smalldisk" // "2022-datacenter-azure-edition-core-smalldisk"
         },
         "enableHybridBenefitServerLicenses": {
             "type": "bool"
@@ -164,13 +164,8 @@
                                 "domainname": "[parameters('activeDirectoryFqdn')]",
                                 "domainCreds": {
                                     "UserName": "[parameters('adminUsername')]",
-                                    "Password": "PrivateSettingsRef:AdminPassword"
+                                    "Password": "[parameters('adminPassword')]"
                                 }
-                            }
-                        },
-                        "protectedSettings": {
-                            "Items": {
-                                "AdminPassword": "[parameters('adminPassword')]"
                             }
                         }
                     }
