@@ -42,7 +42,7 @@
         },
         "imageSku": {
             "type": "string",
-            "defaultValue": "2022-datacenter-azure-edition-smalldisk" // "2022-datacenter-azure-edition-core-smalldisk"
+            "defaultValue": "2019-Datacenter" // "2022-datacenter-azure-edition-core-smalldisk"
         },
         "enableHybridBenefitServerLicenses": {
             "type": "bool"
