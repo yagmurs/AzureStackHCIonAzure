@@ -116,7 +116,7 @@
                 "storageProfile": {
                     "imageReference": {
                         "publisher": "MicrosoftWindowsServer",
-                        "offer": " ",
+                        "offer": "WindowsServer",
                         "sku": "[parameters('imageSku')]",
                         "version": "20348.707.220505" //"latest"
                     },
