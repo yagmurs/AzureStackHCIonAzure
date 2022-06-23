@@ -116,9 +116,9 @@
                 "storageProfile": {
                     "imageReference": {
                         "publisher": "MicrosoftWindowsServer",
-                        "offer": "WindowsServer",
+                        "offer": " ",
                         "sku": "[parameters('imageSku')]",
-                        "version": "latest"
+                        "version": "20348.707.220505" //"latest"
                     },
                     "osDisk": {
                         "name": "[concat(parameters('vmName'), '-osdisk')]",
